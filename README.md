@@ -25,7 +25,7 @@ So in light of this:
 
 We'd like to do a little experiment and see if a large (or even not so
 large) group of people can collectively generate better quality random
-numbers than an algorithm. Intuitevely one would think and hope so,
+numbers than an algorithm. Intuitively one would think and hope so,
 but I fear our sample set will be heavily biased. Yet, even with that
 the case, it will be fascinating to see if and how this might impact
 an evolutionary process as it consumes our random choices. At some
