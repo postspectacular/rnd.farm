@@ -84,7 +84,10 @@
                       :min "0" :max "9223372036854775808"}]]
             [:div.flex-item [:input {:type "submit"}]]]
            [:div.flex-item.flex-footer
-            "API access forthcoming | &copy; 2015 "
+            [:a {:href "#" :title "Access forthcoming"} "API"]
+            " | "
+            [:a {:href "https://github.com/postspectacular/rnd.farm"} "GitHub"]
+            " | &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
          (map style-number (:pool @store))]))
   (POST "/" [n]
