@@ -69,26 +69,29 @@
          [:title "rnd.farm"]
          (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]
         [:body
-         [:div.flex-container
-          [:div.row
-           [:div.flex-item [:h1 "RND.FARM"]]
-           [:div.flex-item "A stream of human generated randomness"]
+         [:div.container
+          [:div#main
+           [:div.row [:h1 "RND.FARM"]]
+           [:div.row "A stream of human generated randomness"]
            (if-let [flash (:flash req)]
-             [:div {:class (str "flex-item-msg msg-" (name (:type flash)))} (:msg flash)]
-             [:div.flex-item-msg (.format formatter (:count @store)) " numbers in stream"])
+             [:div {:class (str "row-msg msg-" (name (:type flash)))} (:msg flash)]
+             [:div.row-msg (.format formatter (:count @store)) " numbers in stream"])
            [:form {:method "post" :action "/"}
             (anti-forgery-field)
-            [:div.flex-item-xl
+            [:div.row-xl
              [:input {:type "number" :name "n"
                       :placeholder "your random number"
                       :autofocus true
                       :min "0" :max "9223372036854775808"}]]
-            [:div.flex-item [:input {:type "submit"}]]]
-           [:div.flex-item.flex-footer
+            [:div.row [:input {:type "submit"}]]]
+           [:div.row.row-footer
+            [:a {:href "#"} "About"]
+            " &middot; "
             [:a {:href "#" :title "Access forthcoming"} "API"]
-            " | "
+            " &middot; "
             [:a {:href "https://github.com/postspectacular/rnd.farm"} "GitHub"]
-            " | &copy; 2015 "
+            [:br]
+            " &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
          (map style-number (butlast (:pool @store)))
          (style-number (peek (:pool @store)) "rnd-last")]))
