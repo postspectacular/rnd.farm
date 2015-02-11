@@ -33,7 +33,15 @@ h1, h2, h3, h4, h5 {
     display: -webkit-flex;
     display: flex;
     align-items: center;
+    -webkit-align-items: center;
+    -moz-align-items: center;
+    -o-align-items: center;
+    -ms-align-items: center;
     justify-content: center;
+    -webkit-justify-content: center;
+    -moz-justify-content: center;
+    -o-justify-content: center;
+    -ms-justify-content: center;
 }
 #main {
     z-index: 1000;
