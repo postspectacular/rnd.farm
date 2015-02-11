@@ -95,7 +95,7 @@
              " &middot; "
              [#_[:a {:href "#"} "About"]
               #_[:a {:href "#" :title "Access forthcoming"} "API"]
-              [:a {:href "https://github.com/postspectacular/rnd.farm"} "GitHub"]])
+              [:a {:href "https://github.com/postspectacular/rnd.farm/blob/master/README.md"} "About / GitHub"]])
             [:br]
             " &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]

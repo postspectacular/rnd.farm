@@ -23,10 +23,10 @@ experimenting with seeing things from alternative perspectives.
 
 So in light of this:
 
-We'd like to do a little experiment and see if a large (or not so
+We'd like to do a little experiment and see if a large (or even not so
 large) group of people can collectively generate better quality random
 numbers than an algorithm. One would hope so, but I fear our sample
-set will be full of bias. Yet even that will be fascinating to see if
+set will be full of bias. Yet, even that will be fascinating to see if
 and how this might impact an evolutionary process as it consumes our
 random choices. At some point (once a sufficient amount of numbers has
 been collected/farmed - with your incredible help! :) it should be
@@ -34,10 +34,10 @@ quite enlightening to analyze the distribution itself in more detail.
 
 ## how?
 
-The initial site is merely targeted to the collection of **our**
-random numbers (you can submit as many as you like), though a simple,
-public read-only API with optional seeding will be implemented in the
-next few days to help integrating this stream into the above
+The initial site is merely targeted at kickstarting the collection of
+**our** random numbers (you can submit as many as you like), though a
+simple, public read-only API with optional seeding will be implemented
+in the next few days to help integrating this stream into the above
 mentioned GP setup.
 
 The range of numbers supported is 0 .. 2^62
@@ -52,7 +52,7 @@ The app was built with:
 * Hiccup
 * Environ
 
-## Running locally (disconnected)
+## running locally
 
 To start a local version on your own machine:
 
@@ -65,7 +65,7 @@ RND_STREAM=random.txt lein ring server
 After a few seconds, this will automatically open the site in your browser.
 Numbers will be read & written to the file given as `RND_STREAM`
 
-## License
+## license
 
 Distributed under the [Apache Software License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
