@@ -4,9 +4,9 @@ A stream of human generated randomness
 
 ## why?
 
-"**True Randomness**" is the topic of
-[Holo Magazine](http://holo-magazine.com/2/)'s upcoming issue #2 and
-we've been working on a
+"Chance, predictability, and (true) randomness" is the theme of the
+'ideas' section of [Holo Magazine](http://holo-magazine.com/2/)'s
+upcoming second issue and we've been working on a
 [Genetic Programming](https://en.wikipedia.org/wiki/Genetic_programming)
 system to create a design for the cover and other aspects. The GP
 approach relies on selectively breeding programs by randomly
