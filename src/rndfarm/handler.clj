@@ -48,13 +48,14 @@
 (def formatter (java.text.DecimalFormat. "#,###,###,###,###,###,###"))
 
 (defn style-number
-  [n]
+  [n & [cls]]
   (let [h (nth [:h1 :h2 :h3 :h4 :h5] (long (rem n 5)))
         col (Long/toString n 16)
         col (subs col (max 0 (- (count col) 6)))
-        px (* 100 (/ (bit-and n 1023) 1023.0))
+        px (* 100 (/ (bit-and n 1023) 1047.0))
         py (* 100 (/ (bit-and (unsigned-bit-shift-right n 10) 1023) 1047.0))]
-    [h {:class "rnd" :style (format "color:#%s;left:%d%%;top:%d%%;" col (int px) (int py))} n]))
+    [h {:class (if cls (str "rnd " cls) "rnd")
+        :style (format "color:#%s;left:%d%%;top:%d%%;" col (int px) (int py))} n]))
 
 (defroutes app-routes
   (GET "/" [:as req]
@@ -74,7 +75,7 @@
            [:div.flex-item "A stream of human generated randomness"]
            (if-let [flash (:flash req)]
              [:div {:class (str "flex-item-msg msg-" (name (:type flash)))} (:msg flash)]
-             [:div.flex-item (.format formatter (:count @store)) " numbers in stream"])
+             [:div.flex-item-msg (.format formatter (:count @store)) " numbers in stream"])
            [:form {:method "post" :action "/"}
             (anti-forgery-field)
             [:div.flex-item-xl
@@ -89,7 +90,8 @@
             [:a {:href "https://github.com/postspectacular/rnd.farm"} "GitHub"]
             " | &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
-         (map style-number (:pool @store))]))
+         (map style-number (butlast (:pool @store)))
+         (style-number (peek (:pool @store)) "rnd-last")]))
   (POST "/" [n]
         (if-let [n' (as-long n)]
           (do
