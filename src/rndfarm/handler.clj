@@ -58,12 +58,16 @@
 
 (defroutes app-routes
   (GET "/" [:as req]
-       (html5
+       (html5 {:lang "en"}
         [:head
+         [:meta {:charset "utf-8"}]
+         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
+         [:meta {:name "viewport" :content "width=device-width,initial-scale=1"}]
+         [:meta {:name "author" :content "Karsten Schmidt, PostSpectacular"}]
+         [:meta {:name "description" :content "A stream of human generated randomness"}]
          [:title "rnd.farm"]
          (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]
         [:body
-         (map style-number (:pool @store))
          [:div.flex-container
           [:div.row
            [:div.flex-item [:h1 "RND.FARM"]]
@@ -81,7 +85,8 @@
             [:div.flex-item [:input {:type "submit"}]]]
            [:div.flex-item.flex-footer
             "API access forthcoming | &copy; 2015 "
-            [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]]))
+            [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
+         (map style-number (:pool @store))]))
   (POST "/" [n]
         (if-let [n' (as-long n)]
           (do

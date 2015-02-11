@@ -83,3 +83,27 @@ a:visited {
     color: #000;
     text-decoration: none;
 }
+@media(max-width:640px) {
+    .flex-item, .flex-item-xl, .flex-item-msg {
+        width: 480px;
+    }
+    input[type=number] {
+        font-size: 34px;
+        padding: 5px;
+    }
+}
+@media(max-width:480px) {
+    body {
+        font-size: 14px;
+    }
+    .flex-item, .flex-item-xl, .flex-item-msg {
+        width: 320px;
+    }
+    .flex-item-msg {
+        line-height: 32px;
+    }
+    input[type=number] {
+        font-size: 24px;
+        padding: 2px;
+    }
+}
