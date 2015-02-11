@@ -52,8 +52,8 @@
   (let [h (nth [:h1 :h2 :h3 :h4 :h5] (long (rem n 5)))
         col (Long/toString n 16)
         col (subs col (max 0 (- (count col) 6)))
-        px (* 100 (/ (bit-and (unsigned-bit-shift-right n 8) 1023) 1023.0))
-        py (* 100 (/ (bit-and (unsigned-bit-shift-right n 16) 1023) 1047.0))]
+        px (* 100 (/ (bit-and n 1023) 1023.0))
+        py (* 100 (/ (bit-and (unsigned-bit-shift-right n 10) 1023) 1047.0))]
     [h {:class "rnd" :style (format "color:#%s;left:%d%%;top:%d%%;" col (int px) (int py))} n]))
 
 (defroutes app-routes
