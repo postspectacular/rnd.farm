@@ -9,7 +9,7 @@
    [ring.util.response :as resp]
    [clojure.java.io :as io]))
 
-(def max-num (bit-shift-left 1 62))
+(def max-num (dec (bit-shift-left 1 62)))
 
 (def formatter (java.text.DecimalFormat. "#,###,###,###,###,###,###"))
 
@@ -21,7 +21,7 @@
 
 (defn style-number
   [n & [cls]]
-  (let [h (nth [:h1 :h2 :h3 :h4 :h5] (long (rem n 5)))
+  (let [h (nth [:h1 :h2 :h3 :h4 :h5] (rem n 5))
         col (Long/toString n 16)
         col (subs col (max 0 (- (count col) 6)))
         px (* 100 (/ (bit-and n 1023) 1047.0))
@@ -31,10 +31,10 @@
 
 (defn persist-number
   [state n]
-  (let [^java.io.Writer writer (:writer state)
-        n' (style-number n)]
-    (try
-      (prn "adding number: " n)
+  (try
+    (prn "adding number: " n)
+    (let [^java.io.Writer writer (:writer state)
+          n' (style-number n)]
       (.write writer (str n "\n"))
       (.flush writer)
       (-> state
@@ -42,10 +42,10 @@
           (update-in [:count] inc)
           (update-in [:pool] #(if (< (count %) 100)
                                 (conj % n')
-                                (conj (subvec % 1) n'))))
-      (catch Exception e
-        (.printStackTrace e)
-        state))))
+                                (conj (subvec % 1) n')))))
+    (catch Exception e
+      (.printStackTrace e)
+      state)))
 
 (defn read-numbers
   [stream]
@@ -103,7 +103,7 @@
          (style-number (:last @store) "rnd-last")]))
 
   (POST "/" [n]
-        (if-let [n' (as-long n)]
+        (if-let [n' (and (not (empty? n)) (as-long n))]
           (do
             (send-off store persist-number n')
             (-> (resp/redirect "/")
