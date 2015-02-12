@@ -2,14 +2,18 @@
   (:require
    [compojure.core :refer :all]
    [compojure.route :as route]
+   [hiccup.core :refer [html]]
    [hiccup.page :refer [html5 include-js include-css]]
    [environ.core :refer [env]]
    [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
    [ring.util.anti-forgery :refer [anti-forgery-field]]
    [ring.util.response :as resp]
+   [ring.util.mime-type :refer [default-mime-types]]
    [clojure.java.io :as io]))
 
+(def mime default-mime-types)
 (def max-num (dec (bit-shift-left 1 62)))
+(def pool-size 100)
 
 (def formatter (java.text.DecimalFormat. "#,###,###,###,###,###,###"))
 
@@ -19,6 +23,12 @@
     (Long/parseUnsignedLong n)
     (catch Exception e)))
 
+(defn conj-max
+  [vec x limit]
+  (if (< (count vec) limit)
+    (conj vec x)
+    (conj (subvec vec 1) x)))
+
 (defn style-number
   [n & [cls]]
   (let [h (nth [:h1 :h2 :h3 :h4 :h5] (rem n 5))
@@ -26,8 +36,9 @@
         col (subs col (max 0 (- (count col) 6)))
         px (* 100 (/ (bit-and n 1023) 1047.0))
         py (* 100 (/ (bit-and (unsigned-bit-shift-right n 10) 1023) 1047.0))]
-    [h {:class (if cls (str "rnd " cls) "rnd")
-        :style (format "color:#%s;left:%d%%;top:%d%%;" col (int px) (int py))} n]))
+    (html
+     [h {:class (if cls (str "rnd " cls) "rnd")
+         :style (format "color:#%s;left:%d%%;top:%d%%;" col (int px) (int py))} n])))
 
 (defn persist-number
   [state n]
@@ -40,9 +51,8 @@
       (-> state
           (assoc :last n)
           (update-in [:count] inc)
-          (update-in [:pool] #(if (< (count %) 100)
-                                (conj % n')
-                                (conj (subvec % 1) n')))))
+          (update-in [:pool] conj n)
+          (update-in [:html-pool] conj-max n' pool-size)))
     (catch Exception e
       (.printStackTrace e)
       state)))
@@ -50,17 +60,18 @@
 (defn read-numbers
   [stream]
   (with-open [r (-> stream io/input-stream io/reader)]
-    (doall (line-seq r))))
+    (vec (line-seq r))))
 
 (defonce store
-  (let [stream  (env :rnd-stream)
-        numbers (read-numbers stream)]
-    (prn "read file: " stream (count numbers))
+  (let [stream (env :rnd-stream)
+        pool   (read-numbers stream)]
+    (prn :file stream :count (count pool))
     (agent
-     {:writer (io/writer stream :append true)
-      :pool (mapv #(style-number (as-long %)) (take-last 100 numbers))
-      :last (as-long (last numbers))
-      :count (count numbers)})))
+     {:writer    (io/writer stream :append true)
+      :html-pool (mapv #(style-number (as-long %)) (take-last 100 pool))
+      :pool      pool
+      :last      (as-long (last pool))
+      :count     (count pool)})))
 
 (defroutes app-routes
   (GET "/" [:as req]
@@ -99,8 +110,30 @@
             [:br]
             " &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
-         (butlast (:pool @store))
+         (butlast (:html-pool @store))
          (style-number (:last @store) "rnd-last")]))
+
+  (GET "/random" [n :as req]
+       (let [n (if-let [n (as-long n)] (min n 1000) 1)
+             pool (:pool @store)
+             nums (repeatedly n #(rand-nth pool))
+             ^String accept (get-in req [:headers "accept"])]
+         (cond
+           (>= (.indexOf accept (mime "json")) 0)
+           (-> (apply str (concat "[" (interpose \, nums) "]"))
+               (resp/response)
+               (resp/content-type (mime "json")))
+           (>= (.indexOf accept "application/edn") 0)
+           (-> (apply str (concat "[" (interpose \space nums) "]"))
+               (resp/response)
+               (resp/content-type (mime "edn")))
+           :else (-> (apply str (interpose \, nums))
+                     (resp/response)
+                     (resp/content-type (mime "csv"))))))
+
+  (GET "/snapshot" []
+       (-> (resp/file-response (env :rnd-stream))
+           (resp/content-type (mime "text/plain"))))
 
   (POST "/" [n]
         (if-let [n' (and (not (empty? n)) (as-long n))]
