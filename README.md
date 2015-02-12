@@ -53,6 +53,30 @@ The app was built with:
 * Hiccup
 * Environ
 
+## obtaining numbers
+
+The site provides two simple means to get hold of submitted numbers via these routes:
+
+### /random[?n=1..1000]
+
+Returns between 1 and 1000 of the submitted numbers in pseudo-random order in either JSON, EDN or CSV formats (specify via `Accept` header). For example:
+
+```bash
+curl http://rnd.farm/random?n=10 -H 'Accept: application/json'
+[617716,151278150479,11,8585785,6513205632056302,8756875767,1500450271,505,3388227013,5]
+
+curl http://rnd.farm/random?n=10 -H 'Accept: application/edn'
+[3784939215633 32447100556 7845 1234568526536 10 4562144123 367689452 22 545626323265 48376218205]
+
+curl http://rnd.farm/random?n=10 # CSV is default
+4329847338943798,3,963,9,2445,56378,14415245255555457,1337,76,283901
+```
+
+### /snapshot
+
+This returns **all** submitted numbers in their original order as
+plain text (one number per line).
+
 ## running locally
 
 To start a local version on your own machine:
