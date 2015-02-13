@@ -1,5 +1,6 @@
 (ns rndfarm.handler
   (:require
+   [org.httpkit.server :as http]
    [compojure.core :refer :all]
    [compojure.route :as route]
    [hiccup.core :refer [html]]
@@ -9,7 +10,11 @@
    [ring.util.anti-forgery :refer [anti-forgery-field]]
    [ring.util.response :as resp]
    [ring.util.mime-type :refer [default-mime-types]]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io]
+   [clojure.edn :as edn]
+   [clj-time.coerce :as tc]
+   [clj-time.local :as lt]
+   [taoensso.timbre :as timbre :refer [debug info warn error fatal]]))
 
 (def mime default-mime-types)
 (def max-num (dec (bit-shift-left 1 62)))
@@ -73,6 +78,27 @@
       :last      (as-long (last pool))
       :count     (count pool)})))
 
+(def channels (atom {}))
+
+(defn ws-handler [req]
+  (http/with-channel req channel
+    (http/on-receive
+     channel
+     (fn [raw]
+       (let [data (edn/read-string raw)
+             msg  (:msg data)]
+         (info "ws received: " channel data)
+         (swap! channels assoc channel req)
+         (doseq [ch (keys @channels)]
+           (->> {:msg msg :timestamp (tc/to-long (lt/local-now))}
+                (pr-str)
+                (http/send! ch))))))
+    (http/on-close
+     channel
+     (fn [status]
+       (info "ws closed: " channel status)
+       (swap! channels dissoc channel)))))
+
 (defroutes app-routes
   (GET "/" [:as req]
        (html5
@@ -113,6 +139,8 @@
          (butlast (:html-pool @store))
          (style-number (:last @store) "rnd-last")]))
 
+  (GET "/ws" [] ws-handler)
+
   (GET "/random" [n :as req]
        (let [n (if-let [n (as-long n)] (min n 1000) 1)
              pool (:pool @store)
@@ -148,3 +176,6 @@
 
 (def app
   (wrap-defaults app-routes site-defaults))
+
+(defn -main [& args]
+  (http/run-server app {:port 3000}))
