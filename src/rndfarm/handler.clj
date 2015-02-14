@@ -110,7 +110,11 @@
      channel
      (fn [status]
        (info "ws closed: " channel status)
-       (swap! channels dissoc channel)))))
+       (let [{:keys [uuid col]} (@channels channel)
+             payload (pr-str [uuid -1000 -1000 col])]
+         (swap! channels dissoc channel)
+         (doseq [ch (keys @channels)]
+           (http/send! ch payload)))))))
 
 (defroutes app-routes
   (GET "/fallback" [:as req]
@@ -179,8 +183,8 @@
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
-                  (env :rnd-server-name "localhost:3000")
-                  ;;(env :rnd-server-name "192.168.1.68:3000")
+                  ;;(env :rnd-server-name "localhost:3000")
+                  (env :rnd-server-name "192.168.1.68:3000")
                   ""))
          (include-js "/js/app.js")]))
 

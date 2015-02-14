@@ -85,6 +85,7 @@
       (let [[_ e] (<! (:receive channels))]
         (when e
           (let [[id x y col] (reader/read-string e)
+                ;; TODO remove DIV when x& == -1000
                 peers (if-not (peers id)
                         (assoc peers id
                                (dom/create-dom!
