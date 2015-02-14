@@ -1,6 +1,7 @@
 html, body {
     height: 100%;
 }
+
 body {
     margin: 0;
     font-family: 'Inconsolata',Menlo,monospace;
@@ -9,20 +10,22 @@ body {
     color: #000;
     overflow: hidden;
 }
+
 h1, h2, h3, h4, h5 {
     margin: 0;
     padding: 0;
 }
+
 .rnd {
     position: fixed;
     z-index: -1;
 }
+
 .rnd-last {
     background: rgba(255,255,0,0.85);
     padding: 10px;
     border-radius: 4px;
 }
-/* http://jsfiddle.net/audetwebdesign/tFscL/ */
 
 .container {
     height: 100%;
@@ -44,6 +47,8 @@ h1, h2, h3, h4, h5 {
     -o-justify-content: center;
     -ms-justify-content: center;
 }
+
+/* https://desandro.github.io/3dtransforms/examples/card-01.html */
 
 #trans-container {
     width: 630px;
@@ -154,15 +159,20 @@ input[type=number] {
     padding: 10px;
     text-align: center;
 }
-input[type=submit] {
+button, input[type=submit] {
     font-size: 18px;
     background-color: #000;
     border: 0;
-    color: white;
+    color: #fff;
     padding: 10px;
     font-family: inherit;
     border-radius: 4px
 }
+.back button, .back input[type=submit] {
+    background-color: #fff;
+    color: #000;
+}
+
 a:link,
 a:visited {
     color: #000;

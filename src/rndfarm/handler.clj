@@ -90,7 +90,7 @@
     (http/on-receive
      channel
      (fn [raw]
-       (let [[v x y t0] (edn/read-string raw)
+       (let [[v t0 x y] (edn/read-string raw)
              t1 (tc/to-long (lt/local-now))
              hex    (Long/toString v 16)
              dt     (- t1 t0)]
@@ -101,10 +101,11 @@
                   {:col (col/hsva->css (m/random) (m/random 0.8 1) (m/random 0.5 1))
                    :uuid (uuid)}))
          ;; broadcast
-         (let [{:keys [uuid col]} (@channels channel)
-               payload (pr-str [uuid x y col])]
-           (doseq [ch (keys @channels)]
-             (http/send! ch payload))))))
+         (if (and x y)
+           (let [{:keys [uuid col]} (@channels channel)
+                 payload (pr-str [uuid x y col])]
+             (doseq [ch (keys @channels)]
+               (http/send! ch payload)))))))
     (http/on-close
      channel
      (fn [status]
@@ -171,10 +172,11 @@
             [:div.front
              [:div.row [:h1 "RND.FARM"]]
              [:div.row "A stream of human generated randomness"]
-             [:div.row [:input#bt-record {:type "submit" :value "Record"}]]]
+             [:div.row [:button#bt-record "Record"]]]
             [:div.back
              [:div.row [:h1 "Recording..."]]
-             [:div.row [:input#bt-cancel {:type "submit" :value "Cancel"}]]]]]]
+             [:div#reclog.row]
+             [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
                   (env :rnd-server-name "localhost:3000")

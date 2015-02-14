@@ -6,46 +6,76 @@
    [thi.ng.domus.async :as async]
    [thi.ng.domus.log :refer [debug info warn]]
    [thi.ng.color.core :as col]
+   [thi.ng.common.math.core :as m]
    [thi.ng.common.stringformat :as f]
    [cljs.core.async :refer [chan <! >! put! timeout close!]]
    [cljs.reader :as reader])
   (:require-macros
-   [cljs.core.async.macros :refer [go-loop]]))
+   [cljs.core.async.macros :refer [go go-loop]]))
 
-(def max-events 2048)
+(def max-bits 4096)
 
 (def state (atom nil))
 
-(def int->hex
-    (let [fmt ["#" (f/hex 6)]]
-      (fn [i] (f/format fmt (bit-and i 0xffffff)))))
+(defn encode-position
+  [px py x y]
+  (let [d (+ (- x px) (bit-shift-left (- y py) 8))
+        v (bit-xor (bit-shift-left x 8) y)
+        v (Math/abs (bit-xor v (bit-shift-left d 16)))]
+    v))
+
+(defn encode-key
+  [x] x)
+
+(defn update-rec-log
+  [bits] (dom/set-text! (dom/by-id "reclog") (str bits " bits collected")))
 
 (defn init-generator
   [state]
-  (let [{:keys [bus channels ws]} @state
-        pos-chan (:pos-input channels)
-        key-chan (:key-input channels)
-        mpos (async/event-publisher bus js/window "mousemove" :pos-input)
-        keys (async/event-publisher bus js/window "keypress" :key-input)]
-    (go-loop [px 0 py 0, i 0]
-      (let [[_ e] (<! pos-chan)]
-        (if (< i max-events)
-          (let [x (.-clientX e)
-                y (.-clientY e)
-                d (+ (- x px) (bit-shift-left (- y py) 8))
-                ;;v (bit-xor (bit-shift-left (Math/abs (- x px)) 8) (Math/abs (- y py)))
-                v (bit-xor (bit-shift-left x 8) y)
-                v (Math/abs (bit-xor v (bit-shift-left d 16)))]
-            (.send ws (pr-str [v x y (utils/now)]))
-            (recur x y i))
-          (do
-            (info "remove mpos listener")
-            (dom/remove-listeners [mpos])))))
+  (let [{:keys [bus ws]} @state
+        [pos keys encode :as e-channels] (repeatedly 3 chan)
+        ;;keys (async/event-channel bus js/window "keypress")
+        listeners (dom/add-listeners
+                   [[js/window "mousemove"
+                     (fn [e]
+                       (put! pos [(.-clientX e) (.-clientY e) (utils/now)]))]
+                    [js/window "touchmove"
+                     (fn [e]
+                       (.preventDefault e)
+                       (let [touches (.-touches e)
+                             t (aget touches 0)]
+                         (put! pos [(.-clientX t) (.-clientY t) (utils/now)])))]
+                    [js/window "keypress"
+                     (fn [e]
+                       (put! keys [(.-keyCode e) (utils/now)]))]
+                    ["#bt-cancel" "click" (fn [] (close! encode))]])]
+    (update-rec-log 0)
+    (go-loop [px 0, py 0]
+      (if-let [e (<! pos)]
+        (let [[x y t] e]
+          (>! encode [(encode-position px py x y) t x y])
+          (recur x y))
+        (info "pos channel closed")))
     (go-loop []
-      (let [[_ e] (<! key-chan)]
-        (when e
-          (.send ws (pr-str [(.-keyCode e) (utils/now)]))
-          (recur))))))
+      (if-let [e (<! keys)]
+        (do (>! encode [(encode-key (first e)) (second e)])
+            (recur))
+        (info "key channel closed")))
+    (go-loop [bits 0]
+      (let [e (<! encode)]
+        (if (and e (< bits max-bits))
+          (let [bits (+ bits (Math/ceil (/ (Math/log (first e)) m/LOG2)))]
+            (update-rec-log bits)
+            (.send ws (pr-str e))
+            (recur bits))
+          (do
+            (doseq [c e-channels] (close! c))
+            (info "remove listeners")
+            (dom/remove-listeners listeners)
+            (dom/set-text! (dom/by-id "reclog") "Done.")
+            (go
+              (<! (timeout 500))
+              (dom/remove-class! (dom/by-id "main") "flipped"))))))))
 
 (defn init-receiver
   [state]
@@ -65,23 +95,26 @@
             (dom/set-style! (peers id) (clj->js {:left (->px x) :top (->px y)}))
             (recur peers)))))))
 
+(defn start-recording
+  [state]
+  (dom/add-class! (dom/by-id "main") "flipped")
+  (init-generator state))
+
 (defn init-app
   []
   (let [bus   (async/pub-sub
                ;;(fn [e] (debug :bus (first e) (second e)) (first e))
                first)
-        chans (async/subscription-channels bus [:send :receive :pos-input :key-input])
+        chans (async/subscription-channels bus [:send :receive])
         ws    (js/WebSocket. (aget js/window "__RND_WS_URL__"))]
     (reset! state
             {:bus bus
              :channels chans
              :ws ws
              :recording? false})
-    (init-generator state)
     (init-receiver state)
     (dom/add-listeners
-     [["#bt-record" "click" (fn [] (dom/add-class! (dom/by-id "main") "flipped"))]
-      ["#bt-cancel" "click" (fn [] (dom/remove-class! (dom/by-id "main") "flipped"))]])))
+     [["#bt-record" "click" (fn [] (start-recording state))]])))
 
 (defn ^:export start
   []
