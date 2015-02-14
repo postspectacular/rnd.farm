@@ -44,7 +44,7 @@ h1, h2, h3, h4, h5 {
     -ms-justify-content: center;
 }
 #main {
-    z-index: 1000;
+    z-index: 100;
     width: 630px;
     background: rgba(255,255,255,0.92);
     box-shadow: 0 0 2em #ccc;
@@ -158,4 +158,11 @@ a:visited {
         font-size: 16px;
         padding: 6px;
     }
+}
+
+div.cursor {
+    position:absolute;
+    z-index: 1000;
+    width: 20px;
+    height: 20px;
 }

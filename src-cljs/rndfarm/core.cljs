@@ -5,45 +5,65 @@
    [thi.ng.domus.utils :as utils]
    [thi.ng.domus.async :as async]
    [thi.ng.domus.log :refer [debug info warn]]
-   [cljs.core.async :refer [chan <! >! put! timeout]]
+   [thi.ng.color.core :as col]
+   [thi.ng.common.stringformat :as f]
+   [cljs.core.async :refer [chan <! >! put! timeout close!]]
    [cljs.reader :as reader])
   (:require-macros
    [cljs.core.async.macros :refer [go-loop]]))
 
+(def max-events 2048)
+
 (def state (atom nil))
+
+(def int->hex
+    (let [fmt ["#" (f/hex 6)]]
+      (fn [i] (f/format fmt (bit-and i 0xffffff)))))
 
 (defn init-generator
   [state]
   (let [{:keys [bus channels ws]} @state
+        pos-chan (:pos-input channels)
+        key-chan (:key-input channels)
         pos (async/event-publisher bus js/window "mousemove" :pos-input)
         keys (async/event-publisher bus js/window "keypress" :key-input)]
-    (go-loop [px 0 py 0 i 0]
-      (let [[_ e] (<! (:pos-input channels))]
-        (when e
+    (go-loop [px 0 py 0, i 0]
+      (let [[_ e] (<! pos-chan)]
+        (if (< i max-events)
           (let [x (.-clientX e)
                 y (.-clientY e)
-                v (bit-xor (bit-shift-left (Math/abs (- x px)) 8) (Math/abs (- y py)))
+                d (+ (- x px) (bit-shift-left (- y py) 8))
+                ;;v (bit-xor (bit-shift-left (Math/abs (- x px)) 8) (Math/abs (- y py)))
                 v (bit-xor (bit-shift-left x 8) y)
-                t (utils/now)
-                i (+ (- x px) (bit-shift-left (- y py) 8))
-                v2 (bit-xor v (bit-shift-left i 16))]
-            (.send ws (pr-str {:msg [v v2 t]}))
-            (recur x y (inc i))))))
+                v (Math/abs (bit-xor v (bit-shift-left d 16)))]
+            (.send ws (pr-str [v x y (utils/now)]))
+            (recur x y i))
+          (do
+            (info "remove pos listener")
+            (dom/remove-listeners [pos])))))
     (go-loop []
-      (let [[_ e] (<! (:key-input channels))]
+      (let [[_ e] (<! key-chan)]
         (when e
-          (.send ws (pr-str {:msg [(.-keyCode e) (utils/now)]}))
+          (.send ws (pr-str [(.-keyCode e) (utils/now)]))
           (recur))))))
 
 (defn init-receiver
   [state]
   (let [{:keys [bus channels ws]} @state]
     (set! (.-onmessage ws) #(async/publish bus :receive (.-data %)))
-    (go-loop []
+    (go-loop [peers {}]
       (let [[_ e] (<! (:receive channels))]
         (when e
-          (info :received e)
-          (recur))))))
+          (let [[id x y col] (reader/read-string e)
+                peers (if-not (peers id)
+                        (assoc peers id
+                               (dom/create-dom!
+                                [:div.cursor
+                                 {:id id :style {:background-color (int->hex col)}}]
+                                (.-body js/document)))
+                        peers)]
+            (dom/set-style! (peers id) (clj->js {:left (->px x) :top (->px y)}))
+            (recur peers)))))))
 
 (defn ws-app
   []

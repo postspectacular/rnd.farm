@@ -81,21 +81,26 @@
 
 (def channels (atom {}))
 
+(defn uuid [] (str (java.util.UUID/randomUUID)))
+
 (defn ws-handler [req]
   (http/with-channel req channel
     (http/on-receive
      channel
      (fn [raw]
-       (let [data (edn/read-string raw)
-             msg  (:msg data)
-             hex  (Long/toString (msg 1) 16)]
-         (info "ws received: " hex data)
-         (swap! channels assoc channel req)
+       (let [[v x y t0] (edn/read-string raw)
+             t1 (tc/to-long (lt/local-now))
+             hex    (Long/toString v 16)
+             dt     (- t1 t0)]
+         (info "ws received: " channel hex t0 dt)
+         (when-not (@channels channel)
+           (info "new channel" channel)
+           (swap! channels assoc channel {:col (rand-int 0xffffff) :uuid (uuid)}))
          ;; broadcast
-         (doseq [ch (keys @channels)]
-           (->> {:msg msg :timestamp (tc/to-long (lt/local-now))}
-                (pr-str)
-                (http/send! ch))))))
+         (let [{:keys [uuid col]} (@channels channel)
+               payload (pr-str [uuid x y col])]
+           (doseq [ch (keys @channels)]
+             (http/send! ch payload))))))
     (http/on-close
      channel
      (fn [status]
@@ -144,7 +149,7 @@
          (style-number (:last @store) "rnd-last")
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
-                  (env :rnd-server-name "localhost:3000")
+                  (env :rnd-server-name "192.168.1.68:3000")
                   ""))
          (include-js "/js/app.js")]))
 
@@ -186,5 +191,18 @@
 (def app
   (wrap-defaults app-routes site-defaults))
 
+(defonce server (atom nil))
+
+(defn stop! []
+  (when-not (nil? @server)
+    (@server :timeout 100)
+    (reset! server nil)))
+
 (defn -main [& args]
-  (http/run-server app {:port 3000}))
+  (reset! server (http/run-server #'app {:port 3000})))
+
+(defn restart
+  []
+  (stop!)
+  (Thread/sleep 1000)
+  (-main nil))
