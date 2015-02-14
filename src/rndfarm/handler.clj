@@ -15,6 +15,8 @@
    [clojure.edn :as edn]
    [clj-time.coerce :as tc]
    [clj-time.local :as lt]
+   [thi.ng.color.core :as col]
+   [thi.ng.common.math.core :as m]
    [taoensso.timbre :as timbre :refer [debug info warn error fatal]]))
 
 (def mime default-mime-types)
@@ -95,7 +97,9 @@
          (info "ws received: " hex dt)
          (when-not (@channels channel)
            (info "new channel" channel)
-           (swap! channels assoc channel {:col (rand-int 0xffffff) :uuid (uuid)}))
+           (swap! channels assoc channel
+                  {:col (col/hsva->css (m/random) (m/random 0.8 1) (m/random 0.5 1))
+                   :uuid (uuid)}))
          ;; broadcast
          (let [{:keys [uuid col]} (@channels channel)
                payload (pr-str [uuid x y col])]
@@ -108,7 +112,7 @@
        (swap! channels dissoc channel)))))
 
 (defroutes app-routes
-  (GET "/old" [:as req]
+  (GET "/fallback" [:as req]
        ;;(info req)
        (html5
         {:lang "en"}
@@ -128,7 +132,7 @@
            (if-let [flash (:flash req)]
              [:div {:class (str "row-msg msg-" (name (:type flash)))} (:msg flash)]
              [:div.row-msg (.format formatter (:count @store)) " numbers in stream"])
-           [:form {:method "post" :action "/"}
+           [:form {:method "post" :action "/fallback"}
             (anti-forgery-field)
             [:div.row-xl
              [:input {:type "number" :name "n"
@@ -202,13 +206,13 @@
        (-> (resp/file-response (env :rnd-stream))
            (resp/content-type (mime "text/plain"))))
 
-  (POST "/" [n]
+  (POST "/fallback" [n]
         (if-let [n' (and (not (empty? n)) (as-long n))]
           (do
             (send-off store persist-number n')
-            (-> (resp/redirect "/")
+            (-> (resp/redirect "/fallback")
                 (assoc :flash {:type :ok :msg (str "Thanks, that's a great number: " n')})))
-          (-> (resp/redirect "/")
+          (-> (resp/redirect "/fallbck")
               (assoc :flash {:type :err :msg "Hmmm.... that number wasn't so good!"}))))
 
   (route/not-found "Not Found"))

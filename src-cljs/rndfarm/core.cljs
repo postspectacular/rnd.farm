@@ -59,13 +59,13 @@
                         (assoc peers id
                                (dom/create-dom!
                                 [:div.cursor
-                                 {:id id :style {:background-color (int->hex col)}}]
+                                 {:id id :style {:background-color col}}]
                                 (.-body js/document)))
                         peers)]
             (dom/set-style! (peers id) (clj->js {:left (->px x) :top (->px y)}))
             (recur peers)))))))
 
-(defn ws-app
+(defn init-app
   []
   (let [bus   (async/pub-sub
                ;;(fn [e] (debug :bus (first e) (second e)) (first e))
@@ -85,7 +85,8 @@
 
 (defn ^:export start
   []
-  (if true ;;(detect/websocket?)
-    (ws-app)))
+  (if (aget js/window "WebSocket")
+    (init-app)
+    (set! (.-href (.-location js/window)) "/fallback")))
 
 (start)
