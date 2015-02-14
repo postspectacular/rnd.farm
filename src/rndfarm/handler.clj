@@ -85,36 +85,71 @@
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
+(defn register-channel
+  [channel]
+  (info "new channel" channel)
+  (swap! channels assoc channel
+         {:col (col/hsva->css (m/random) (m/random 0.8 1) (m/random 0.5 1))
+          :uuid (uuid)}))
+
+(defn process-register-message
+  [channel]
+  (let [channels @channels]
+    (register-channel channel)
+    (doseq [[ch cv] channels]
+      (when-let [pos (cv :pos)]
+        (http/send! channel (pr-str [1 (:uuid cv) (pos 0) (pos 1) (:col cv)]))))))
+
+(defn process-encode-message
+  [channel msg]
+  (let [[v t0 x y] msg
+        t1   (tc/to-long (lt/local-now))
+        hex (Long/toString v 16)
+        dt  (- t1 t0)]
+    (info "ws received: " hex dt)
+    (when-not (@channels channel)
+      (register-channel channel))
+    (swap! channels assoc-in [channel :pos] [x y])
+    ;; broadcast
+    (if (and x y)
+      (let [{:keys [uuid col]} (@channels channel)
+            payload (pr-str [1 uuid x y col])]
+        (doseq [ch (keys @channels)]
+          (http/send! ch payload))))))
+
+(defn process-hide-message
+  [channel]
+  (let [{:keys [uuid col]} (@channels channel)
+        payload (pr-str [1 uuid -1000 -1000 col])]
+    (swap! channels assoc-in [channel :pos] [-1000 -1000])
+    (info "ws hide: " channel uuid)
+    (doseq [ch (keys @channels)]
+      (http/send! ch payload))))
+
+(defn process-disconnect
+  [channel]
+  (info "ws disconnected: " channel)
+  (let [{:keys [uuid col]} (@channels channel)
+        payload (pr-str [3 uuid])]
+    (swap! channels dissoc channel)
+    (doseq [ch (keys @channels)]
+      (http/send! ch payload))))
+
 (defn ws-handler [req]
   (http/with-channel req channel
     (http/on-receive
      channel
      (fn [raw]
-       (let [[v t0 x y] (edn/read-string raw)
-             t1 (tc/to-long (lt/local-now))
-             hex    (Long/toString v 16)
-             dt     (- t1 t0)]
-         (info "ws received: " hex dt)
-         (when-not (@channels channel)
-           (info "new channel" channel)
-           (swap! channels assoc channel
-                  {:col (col/hsva->css (m/random) (m/random 0.8 1) (m/random 0.5 1))
-                   :uuid (uuid)}))
-         ;; broadcast
-         (if (and x y)
-           (let [{:keys [uuid col]} (@channels channel)
-                 payload (pr-str [uuid x y col])]
-             (doseq [ch (keys @channels)]
-               (http/send! ch payload)))))))
+       (let [msg (edn/read-string raw)]
+         (case (first msg)
+           0 (process-register-message channel)
+           1 (process-encode-message channel (rest msg))
+           2 (process-hide-message channel)
+           (warn "unknown msg type: " msg)))))
     (http/on-close
      channel
      (fn [status]
-       (info "ws closed: " channel status)
-       (let [{:keys [uuid col]} (@channels channel)
-             payload (pr-str [uuid -1000 -1000 col])]
-         (swap! channels dissoc channel)
-         (doseq [ch (keys @channels)]
-           (http/send! ch payload)))))))
+       (process-disconnect channel)))))
 
 (defroutes app-routes
   (GET "/fallback" [:as req]
@@ -180,6 +215,7 @@
             [:div.back
              [:div.row [:h1 "Recording..."]]
              [:div#reclog.row]
+             [:div#hist-wrapper.row]
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
