@@ -12,16 +12,20 @@
                  [hiccup "1.0.5"]
                  [environ "1.0.0"]
                  [clj-time "0.9.0"]
-                 [com.taoensso/timbre "2.3.0"]]
-
-  :plugins [[lein-ring "0.8.13"]]
+                 [com.taoensso/timbre "2.3.0"]
+                 [thi.ng/domus "0.1.0-SNAPSHOT"]
+                 [thi.ng/geom-core "0.3.0-SNAPSHOT"]
+                 [thi.ng/geom-types "0.3.0-SNAPSHOT"]
+                 [thi.ng/geom-svg "0.3.0-SNAPSHOT"]]
 
   :ring {:handler rndfarm.handler/app}
   :main rndfarm.handler
-  
+
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [ring-mock "0.1.5"]]}}
+                        [ring-mock "0.1.5"]]
+         :plugins      [[lein-ring "0.8.13"]
+                        [lein-cljsbuild "1.0.4"]]}}
 
   :cljsbuild
   {:builds [{:id "dev"

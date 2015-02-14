@@ -5,6 +5,7 @@
    [compojure.route :as route]
    [hiccup.core :refer [html]]
    [hiccup.page :refer [html5 include-js include-css]]
+   [hiccup.element :as el]
    [environ.core :refer [env]]
    [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
    [ring.util.anti-forgery :refer [anti-forgery-field]]
@@ -86,9 +87,11 @@
      channel
      (fn [raw]
        (let [data (edn/read-string raw)
-             msg  (:msg data)]
-         (info "ws received: " channel data)
+             msg  (:msg data)
+             hex  (Long/toString (msg 1) 16)]
+         (info "ws received: " hex data)
          (swap! channels assoc channel req)
+         ;; broadcast
          (doseq [ch (keys @channels)]
            (->> {:msg msg :timestamp (tc/to-long (lt/local-now))}
                 (pr-str)
@@ -101,6 +104,7 @@
 
 (defroutes app-routes
   (GET "/" [:as req]
+       ;;(info req)
        (html5
         {:lang "en"}
         [:head
@@ -137,7 +141,12 @@
             " &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
          (butlast (:html-pool @store))
-         (style-number (:last @store) "rnd-last")]))
+         (style-number (:last @store) "rnd-last")
+         (el/javascript-tag
+          (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
+                  (env :rnd-server-name "localhost:3000")
+                  ""))
+         (include-js "/js/app.js")]))
 
   (GET "/ws" [] ws-handler)
 
