@@ -92,7 +92,7 @@
              t1 (tc/to-long (lt/local-now))
              hex    (Long/toString v 16)
              dt     (- t1 t0)]
-         (info "ws received: " channel hex t0 dt)
+         (info "ws received: " hex dt)
          (when-not (@channels channel)
            (info "new channel" channel)
            (swap! channels assoc channel {:col (rand-int 0xffffff) :uuid (uuid)}))
@@ -108,7 +108,7 @@
        (swap! channels dissoc channel)))))
 
 (defroutes app-routes
-  (GET "/" [:as req]
+  (GET "/old" [:as req]
        ;;(info req)
        (html5
         {:lang "en"}
@@ -122,7 +122,7 @@
          (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]
         [:body
          [:div.container
-          [:div#main
+          [:div#main-old
            [:div.row [:h1 "RND.FARM"]]
            [:div.row "A stream of human generated randomness"]
            (if-let [flash (:flash req)]
@@ -146,10 +146,35 @@
             " &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
          (butlast (:html-pool @store))
-         (style-number (:last @store) "rnd-last")
+         (style-number (:last @store) "rnd-last")]))
+
+  (GET "/" [:as req]
+       ;;(info req)
+       (html5
+        {:lang "en"}
+        [:head
+         [:meta {:charset "utf-8"}]
+         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
+         [:meta {:name "viewport" :content "width=device-width,initial-scale=1"}]
+         [:meta {:name "author" :content "Karsten Schmidt, PostSpectacular"}]
+         [:meta {:name "description" :content "A stream of human generated randomness"}]
+         [:title "rnd.farm"]
+         (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]
+        [:body
+         [:div.container
+          [:div#trans-container
+           [:div#main
+            [:div.front
+             [:div.row [:h1 "RND.FARM"]]
+             [:div.row "A stream of human generated randomness"]
+             [:div.row [:input#bt-record {:type "submit" :value "Record"}]]]
+            [:div.back
+             [:div.row [:h1 "Recording..."]]
+             [:div.row [:input#bt-cancel {:type "submit" :value "Cancel"}]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
-                  (env :rnd-server-name "192.168.1.68:3000")
+                  (env :rnd-server-name "localhost:3000")
+                  ;;(env :rnd-server-name "192.168.1.68:3000")
                   ""))
          (include-js "/js/app.js")]))
 
@@ -204,5 +229,5 @@
 (defn restart
   []
   (stop!)
-  (Thread/sleep 1000)
+  (Thread/sleep 200)
   (-main nil))

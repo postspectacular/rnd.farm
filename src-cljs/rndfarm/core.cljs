@@ -25,7 +25,7 @@
   (let [{:keys [bus channels ws]} @state
         pos-chan (:pos-input channels)
         key-chan (:key-input channels)
-        pos (async/event-publisher bus js/window "mousemove" :pos-input)
+        mpos (async/event-publisher bus js/window "mousemove" :pos-input)
         keys (async/event-publisher bus js/window "keypress" :key-input)]
     (go-loop [px 0 py 0, i 0]
       (let [[_ e] (<! pos-chan)]
@@ -39,8 +39,8 @@
             (.send ws (pr-str [v x y (utils/now)]))
             (recur x y i))
           (do
-            (info "remove pos listener")
-            (dom/remove-listeners [pos])))))
+            (info "remove mpos listener")
+            (dom/remove-listeners [mpos])))))
     (go-loop []
       (let [[_ e] (<! key-chan)]
         (when e
@@ -68,9 +68,8 @@
 (defn ws-app
   []
   (let [bus   (async/pub-sub
-               (fn [e] (debug :bus (first e) (second e)) (first e))
-               ;;first
-               )
+               ;;(fn [e] (debug :bus (first e) (second e)) (first e))
+               first)
         chans (async/subscription-channels bus [:send :receive :pos-input :key-input])
         ws    (js/WebSocket. (aget js/window "__RND_WS_URL__"))]
     (reset! state
@@ -79,7 +78,10 @@
              :ws ws
              :recording? false})
     (init-generator state)
-    (init-receiver state)))
+    (init-receiver state)
+    (dom/add-listeners
+     [["#bt-record" "click" (fn [] (dom/add-class! (dom/by-id "main") "flipped"))]
+      ["#bt-cancel" "click" (fn [] (dom/remove-class! (dom/by-id "main") "flipped"))]])))
 
 (defn ^:export start
   []
