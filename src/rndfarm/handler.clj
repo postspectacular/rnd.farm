@@ -1,5 +1,7 @@
 (ns rndfarm.handler
   (:require
+   [rndfarm.config :refer [config]]
+   [rndfarm.digest :as dig]
    [org.httpkit.server :as http]
    [compojure.core :refer :all]
    [compojure.route :as route]
@@ -20,8 +22,6 @@
    [taoensso.timbre :as timbre :refer [debug info warn error fatal]]))
 
 (def mime default-mime-types)
-(def max-num (dec (bit-shift-left 1 62)))
-(def pool-size 100)
 
 (def formatter (java.text.DecimalFormat. "#,###,###,###,###,###,###"))
 
@@ -60,7 +60,7 @@
           (assoc :last n)
           (update-in [:count] inc)
           (update-in [:pool] conj n)
-          (update-in [:html-pool] conj-max n' pool-size)))
+          (update-in [:html-pool] conj-max n' (:pool-size config))))
     (catch Exception e
       (.printStackTrace e)
       state)))
@@ -178,7 +178,7 @@
              [:input {:type "number" :name "n"
                       :placeholder "your random number"
                       :autofocus true
-                      :min "0" :max max-num}]]
+                      :min "0" :max (:max-num config)}]]
             [:div.row [:input {:type "submit"}]]]
            [:div.row.row-footer
             (interpose
@@ -215,7 +215,7 @@
             [:div.back
              [:div.row [:h1 "Recording..."]]
              [:div#reclog.row]
-             [:div#hist-wrapper.row]
+             [:div#hist-wrapper.row-xl]
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
@@ -254,7 +254,7 @@
             (send-off store persist-number n')
             (-> (resp/redirect "/fallback")
                 (assoc :flash {:type :ok :msg (str "Thanks, that's a great number: " n')})))
-          (-> (resp/redirect "/fallbck")
+          (-> (resp/redirect "/fallback")
               (assoc :flash {:type :err :msg "Hmmm.... that number wasn't so good!"}))))
 
   (route/not-found "Not Found"))

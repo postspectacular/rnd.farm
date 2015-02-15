@@ -119,6 +119,26 @@ h1, h2, h3, h4, h5 {
     transform: rotateY( 180deg );
 }
 
+#hist-wrapper {
+    height: 75px;
+}
+
+#axis {
+    stroke: #fff;
+    fill: none;
+    stroke-width: 1px;
+}
+
+#labels, #bins {
+    fill: #fff;
+    stroke: none;
+}
+
+#labels text {
+    text-anchor: middle;
+    font-size: 0.4px;
+}
+
 .row {
     padding: 5px;
     height: 50px;
