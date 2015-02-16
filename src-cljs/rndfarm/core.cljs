@@ -1,12 +1,9 @@
 (ns rndfarm.core
   (:require
    [thi.ng.domus.core :as dom :refer [->px]]
-   [thi.ng.domus.detect :as detect]
    [thi.ng.domus.utils :as utils]
-   [thi.ng.domus.async :as async]
    [thi.ng.domus.log :refer [debug info warn]]
    [thi.ng.color.core :as col]
-   [thi.ng.common.math.core :as m]
    [thi.ng.common.stringformat :as f]
    [cljs.core.async :refer [chan <! >! put! timeout close!]]
    [cljs.reader :as reader])
@@ -14,6 +11,7 @@
    [cljs.core.async.macros :refer [go go-loop]]))
 
 (def MAX-BITS 8192)
+(def LOG2 (Math/log 2))
 
 (def MSG-REGISTER 0)
 (def MSG-ENCODE 1)
@@ -21,6 +19,8 @@
 (def MSG-DISCONNECT 3)
 
 (def state (atom nil))
+
+(def by-id (memoize dom/by-id))
 
 (defn get-window-size
   [] [(.-innerWidth js/window) (.-innerHeight js/window)])
@@ -44,35 +44,35 @@
            (bit-and t 0xffff)))
 
 (defn update-rec-log
-  [bits] (dom/set-text! (dom/by-id "reclog") (str bits " bits collected")))
+  [bits] (dom/set-text! (by-id "reclog") (str bits " bits collected")))
 
 (defn init-histogram
   [state]
-  (->> (dom/set-html! (dom/by-id "hist-wrapper") "")
+  (->> (dom/set-html! (by-id "hist-wrapper") "")
        (dom/create-dom!
         [:svg
          {:width "90%" :height "100%" :viewBox "-0.2 0 16 1.5"}
-         [:g#axis {} 
+         [:g#axis 
           [:polyline
            {:points "0 0 0 1 16 1"
             :vector-effect "non-scaling-stroke"}]
           [:path
-           {:d "M-0.2,0.75 L0,0.75 M-0.2,0.5 L0,0.5 M-0.2,0.25 L0,0.25"
+           {:d "M-0.2,0.75L0,0.75M-0.2,0.5L0,0.5M-0.2,0.25L0,0.25"
             :vector-effect "non-scaling-stroke"}]
           [:path
-           {:d "M1,1 L1,1.2 M2,1 L2,1.2 M3,1 L3,1.2 M4,1 L4,1.2 M5,1 L5,1.2 M6,1 L6,1.2 M7,1 L7,1.2 M8,1 L8,1.2 M9,1 L9,1.2 M10,1 L10,1.2 M11,1 L11,1.2 M12,1 L12,1.2 M13,1 L13,1.2 M14,1 L14,1.2 M15,1 L15,1.2"
+           {:d "M1,1L1,1.2M2,1L2,1.2M3,1L3,1.2M4,1L4,1.2M5,1L5,1.2M6,1L6,1.2M7,1L7,1.2M8,1L8,1.2M9,1L9,1.2M10,1L10,1.2M11,1L11,1.2M12,1L12,1.2M13,1L13,1.2M14,1L14,1.2M15,1L15,1.2"
             :vector-effect "non-scaling-stroke"}]]
-         [:g#labels {}
+         [:g#labels
           (for [x (range 16)]
             [:text {:x (+ x 0.5) :y 1.5} (f/format [(f/hex 2)] (* x 16))])]
-         [:g#bins {}]]))
+         [:g#bins]]))
   (swap! state assoc :bins (vec (repeat 16 0))))
 
 (defn int->bytes
   [v]
   (loop [acc (), v v]
     (if (pos? v)
-      (recur (conj acc (bit-and v 0xff)) (bit-shift-right v 8))
+      (recur (conj acc (bit-and v 0xff)) (unsigned-bit-shift-right v 8))
       acc)))
 
 (defn update-histogram
@@ -81,7 +81,7 @@
               (fn [bins v] (update-in bins [(bit-shift-right v 4)] inc))
               (:bins @state) (int->bytes v))
         peak (reduce max bins)
-        el-bins (dom/by-id "bins")]
+        el-bins (by-id "bins")]
     (dom/set-html! el-bins "")
     (dorun
      (map-indexed
@@ -129,8 +129,7 @@
       (let [e (<! encode)]
         (if (and e (< bits MAX-BITS))
           (let [v (first e)
-                bit-count (Math/ceil (/ (Math/log v) m/LOG2))
-                bits (+ bits bit-count)]
+                bits (+ bits (Math/ceil (/ (Math/log v) LOG2)))]
             (if (> (count e) 2)
               (let [[v t x y] e
                     [w h] (:window-size @state)]
@@ -143,11 +142,11 @@
             (doseq [c e-channels] (close! c))
             (info "remove listeners")
             (dom/remove-listeners listeners)
-            (dom/set-text! (dom/by-id "reclog") "Done.")
+            (dom/set-text! (by-id "reclog") "Done.")
             (.send ws (pr-str [MSG-HIDE]))
             (go
               (<! (timeout 500))
-              (dom/remove-class! (dom/by-id "main") "flipped"))))))))
+              (dom/remove-class! (by-id "main") "flipped"))))))))
 
 (defn update-cursor
   [peers [id x y col]]
@@ -171,11 +170,12 @@
 
 (defn init-receiver
   [state]
-  (let [{:keys [bus channels ws]} @state]
-    (set! (.-onmessage ws) #(async/publish bus :receive (.-data %)))
+  (let [{:keys [ws]} @state
+        receiver (chan 4)]
+    (set! (.-onmessage ws) #(put! receiver (.-data %)))
     (set! (.-onopen ws) (fn [e] (.send ws (pr-str [MSG-REGISTER]))))
     (go-loop [peers {}]
-      (let [[_ e] (<! (:receive channels))]
+      (let [e (<! receiver)]
         (when e
           (let [msg (reader/read-string e)]
             ;;(info msg)
@@ -187,21 +187,15 @@
 
 (defn start-recording
   [state]
-  (dom/add-class! (dom/by-id "main") "flipped")
+  (dom/add-class! (by-id "main") "flipped")
   (record-session state))
 
 (defn init-app
   []
-  (let [bus   (async/pub-sub
-               ;;(fn [e] (debug :bus (first e) (second e)) (first e))
-               first)
-        chans (async/subscription-channels bus [:send :receive])
-        resize (window-resizer state)
-        ws    (js/WebSocket. (aget js/window "__RND_WS_URL__"))]
+  (let [resize (window-resizer state)
+        ws     (js/WebSocket. (aget js/window "__RND_WS_URL__"))]
     (reset! state
-            {:bus bus
-             :channels chans
-             :ws ws
+            {:ws ws
              :recording? false})
     (init-receiver state)
     (resize)
