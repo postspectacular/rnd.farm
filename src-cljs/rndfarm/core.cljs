@@ -3,7 +3,6 @@
    [thi.ng.domus.core :as dom :refer [->px]]
    [thi.ng.domus.utils :as utils]
    [thi.ng.domus.log :refer [debug info warn]]
-   [thi.ng.color.core :as col]
    [thi.ng.common.stringformat :as f]
    [cljs.core.async :refer [chan <! >! put! timeout close!]]
    [cljs.reader :as reader])
