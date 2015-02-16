@@ -97,7 +97,7 @@
     (when-not (get-channel channel)
       (register-channel channel))
     (swap! state assoc-in [:channels channel :pos] [x y])
-    (store/new-input (:store @state) v)
+    (add-number v)
     ;; broadcast
     (if (and x y)
       (let [{:keys [uuid col]} (get-channel channel)
@@ -151,7 +151,7 @@
     "var _paq = _paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']);(function(){var u='//rnd.farm:8080/'; _paq.push(['setTrackerUrl',u+'piwik.php']); _paq.push(['setSiteId',1]); var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);})();")))
 
 (defroutes app-routes
-  (GET "/fallback" [:as req]
+  (GET "/" [:as req]
        ;;(info req)
        (html5
         {:lang "en"}
@@ -171,7 +171,7 @@
            (if-let [flash (:flash req)]
              [:div {:class (str "row-msg msg-" (name (:type flash)))} (:msg flash)]
              [:div.row-msg (.format formatter (:count @state)) " numbers in stream"])
-           [:form {:method "post" :action "/fallback"}
+           [:form {:method "post" :action "/"}
             (anti-forgery-field)
             [:div.row-xl
              [:input {:type "number" :name "n"
@@ -191,7 +191,7 @@
          (butlast (:html-pool @state))
          (style-number (:last @state) "rnd-last")]))
 
-  (GET "/" [:as req]
+  (GET "/new" [:as req]
        ;;(info req)
        (html5
         {:lang "en"}
@@ -241,13 +241,13 @@
        (-> (resp/file-response (-> config :raw :out-path))
            (resp/content-type (mime "text/plain"))))
 
-  (POST "/fallback" [n]
+  (POST "/" [n]
         (if-let [n' (and (not (empty? n)) (as-long n))]
           (do
             (add-number n')
-            (-> (resp/redirect "/fallback")
+            (-> (resp/redirect "/")
                 (assoc :flash {:type :ok :msg (str "Thanks, that's a great number: " n')})))
-          (-> (resp/redirect "/fallback")
+          (-> (resp/redirect "/")
               (assoc :flash {:type :err :msg "Hmmm.... that number wasn't so good!"}))))
 
   (route/not-found "Not Found"))

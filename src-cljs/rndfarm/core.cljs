@@ -178,7 +178,7 @@
       (let [[_ e] (<! (:receive channels))]
         (when e
           (let [msg (reader/read-string e)]
-            (info msg)
+            ;;(info msg)
             (recur
              (case (first msg)
                1 (update-cursor peers (rest msg))
@@ -213,6 +213,6 @@
   []
   (if (aget js/window "WebSocket")
     (init-app)
-    (set! (.-href (.-location js/window)) "/fallback")))
+    (set! (.-href (.-location js/window)) "/")))
 
 (start)
