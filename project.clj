@@ -14,6 +14,7 @@
                  [clj-time "0.9.0"]
                  [com.taoensso/timbre "2.3.0"]
                  [thi.ng/domus "0.1.0-SNAPSHOT"]
+                 [thi.ng/color "0.1.1-SNAPSHOT"]
                  [thi.ng/geom-core "0.3.0-SNAPSHOT"]
                  [thi.ng/geom-types "0.3.0-SNAPSHOT"]
                  [thi.ng/geom-svg "0.3.0-SNAPSHOT"]]
