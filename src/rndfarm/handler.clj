@@ -262,7 +262,7 @@
     (prn :file raw :count (count pool))
     (reset! state
      {:html-pool (mapv #(style-number (as-long %)) (take-last (:html-pool-size config) pool))
-      :pool      (take-last (:raw-pool-size config) pool)
+      :pool      (vec (take-last (:raw-pool-size config) pool))
       :last      (as-long (peek pool))
       :count     (count pool)
       :store     (store/init-store config)
