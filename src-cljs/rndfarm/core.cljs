@@ -80,7 +80,7 @@
               (fn [bins v] (update-in bins [(bit-shift-right v 4)] inc))
               (:bins @state) (int->bytes v))
         peak (reduce max bins)
-        el-bins (by-id "bins")]
+        el-bins (dom/by-id "bins")]
     (dom/set-html! el-bins "")
     (dorun
      (map-indexed
