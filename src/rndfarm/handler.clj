@@ -1,7 +1,7 @@
 (ns rndfarm.handler
   (:require
    [rndfarm.config :refer [config]]
-   [rndfarm.digest :as dig]
+   [rndfarm.store :as store]
    [org.httpkit.server :as http]
    [compojure.core :refer :all]
    [compojure.route :as route]
@@ -20,6 +20,8 @@
    [thi.ng.color.core :as col]
    [thi.ng.common.math.core :as m]
    [taoensso.timbre :as timbre :refer [debug info warn error fatal]]))
+
+(defonce state (atom {}))
 
 (def mime default-mime-types)
 
@@ -48,53 +50,38 @@
      [h {:class (if cls (str "rnd " cls) "rnd")
          :style (format "color:#%s;left:%d%%;top:%d%%;" col (int px) (int py))} n])))
 
-(defn persist-number
-  [state n]
-  (try
-    (prn "adding number: " n)
-    (let [^java.io.Writer writer (:writer state)
-          n' (style-number n)]
-      (.write writer (str n "\n"))
-      (.flush writer)
-      (-> state
-          (assoc :last n)
-          (update-in [:count] inc)
-          (update-in [:pool] conj n)
-          (update-in [:html-pool] conj-max n' (:pool-size config))))
-    (catch Exception e
-      (.printStackTrace e)
-      state)))
-
 (defn read-numbers
   [stream]
   (with-open [r (-> stream io/input-stream io/reader)]
     (vec (line-seq r))))
 
-(defonce store
-  (let [stream (env :rnd-stream)
-        pool   (read-numbers stream)]
-    (prn :file stream :count (count pool))
-    (agent
-     {:writer    (io/writer stream :append true)
-      :html-pool (mapv #(style-number (as-long %)) (take-last 100 pool))
-      :pool      pool
-      :last      (as-long (last pool))
-      :count     (count pool)})))
-
-(def channels (atom {}))
+(defn add-number
+  [x]
+  (store/new-input (:store @state) x)
+  (swap! state
+         (fn [state]
+           (-> state
+               (update-in [:html-pool] conj-max (style-number x) (:html-pool-size config))
+               (update-in [:pool] conj-max x (:raw-pool-size config))
+               (assoc :last x)
+               (update-in [:count] inc)))))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
+
+(defn all-channels [] (keys (:channels @state)))
+
+(defn get-channel [c] (get-in @state [:channels c]))
 
 (defn register-channel
   [channel]
   (info "new channel" channel)
-  (swap! channels assoc channel
+  (swap! state assoc-in [:channels channel]
          {:col (col/hsva->css (m/random) (m/random 0.8 1) (m/random 0.5 1))
           :uuid (uuid)}))
 
 (defn process-register-message
   [channel]
-  (let [channels @channels]
+  (let [channels (:channels @state)]
     (register-channel channel)
     (doseq [[ch cv] channels]
       (when-let [pos (cv :pos)]
@@ -107,32 +94,33 @@
         hex (Long/toString v 16)
         dt  (- t1 t0)]
     (info "ws received: " hex dt)
-    (when-not (@channels channel)
+    (when-not (get-channel channel)
       (register-channel channel))
-    (swap! channels assoc-in [channel :pos] [x y])
+    (swap! state assoc-in [:channels channel :pos] [x y])
+    (store/new-input (:store @state) v)
     ;; broadcast
     (if (and x y)
-      (let [{:keys [uuid col]} (@channels channel)
+      (let [{:keys [uuid col]} (get-channel channel)
             payload (pr-str [1 uuid x y col])]
-        (doseq [ch (keys @channels)]
+        (doseq [ch (all-channels)]
           (http/send! ch payload))))))
 
 (defn process-hide-message
   [channel]
-  (let [{:keys [uuid col]} (@channels channel)
+  (let [{:keys [uuid col]} (get-channel channel)
         payload (pr-str [1 uuid -1000 -1000 col])]
-    (swap! channels assoc-in [channel :pos] [-1000 -1000])
+    (swap! state assoc-in [:channels channel :pos] [-1000 -1000])
     (info "ws hide: " channel uuid)
-    (doseq [ch (keys @channels)]
+    (doseq [ch (all-channels)]
       (http/send! ch payload))))
 
 (defn process-disconnect
   [channel]
   (info "ws disconnected: " channel)
-  (let [{:keys [uuid col]} (@channels channel)
+  (let [{:keys [uuid col]} (get-channel channel)
         payload (pr-str [3 uuid])]
-    (swap! channels dissoc channel)
-    (doseq [ch (keys @channels)]
+    (swap! state update-in [:channels] dissoc channel)
+    (doseq [ch (all-channels)]
       (http/send! ch payload))))
 
 (defn ws-handler [req]
@@ -150,6 +138,17 @@
      channel
      (fn [status]
        (process-disconnect channel)))))
+
+(defn numbers-mime-response
+  [nums mtype start end sep]
+  (-> (apply str (concat start (interpose sep nums) end))
+      (resp/response)
+      (resp/content-type (mime mtype))))
+
+(def include-piwik
+  (html
+   (el/javascript-tag
+    "var _paq = _paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']);(function(){var u='//rnd.farm:8080/'; _paq.push(['setTrackerUrl',u+'piwik.php']); _paq.push(['setSiteId',1]); var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);})();")))
 
 (defroutes app-routes
   (GET "/fallback" [:as req]
@@ -171,7 +170,7 @@
            [:div.row "A stream of human generated randomness"]
            (if-let [flash (:flash req)]
              [:div {:class (str "row-msg msg-" (name (:type flash)))} (:msg flash)]
-             [:div.row-msg (.format formatter (:count @store)) " numbers in stream"])
+             [:div.row-msg (.format formatter (:count @state)) " numbers in stream"])
            [:form {:method "post" :action "/fallback"}
             (anti-forgery-field)
             [:div.row-xl
@@ -189,8 +188,8 @@
             [:br]
             " &copy; 2015 "
             [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
-         (butlast (:html-pool @store))
-         (style-number (:last @store) "rnd-last")]))
+         (butlast (:html-pool @state))
+         (style-number (:last @state) "rnd-last")]))
 
   (GET "/" [:as req]
        ;;(info req)
@@ -218,40 +217,34 @@
              [:div#hist-wrapper.row-xl]
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
-          (format "var __RND_WS_URL__=\"ws://%s/ws\";var __RND_UID__=[%s];"
+          (format "var __RND_WS_URL__=\"ws://%s/ws\";"
                   ;;(env :rnd-server-name "localhost:3000")
-                  (env :rnd-server-name "192.168.1.68:3000")
-                  ""))
-         (include-js "/js/app.js")]))
+                  (:server-name config)))
+         (include-js "/js/app.js")
+         include-piwik]))
 
   (GET "/ws" [] ws-handler)
 
   (GET "/random" [n :as req]
-       (let [n (if-let [n (as-long n)] (min n 1000) 1)
-             pool (:pool @store)
+       (let [n (if-let [n (as-long n)] (max (min n 1000) 1) 1)
+             pool (:pool @state)
              nums (repeatedly n #(rand-nth pool))
              ^String accept (get-in req [:headers "accept"])]
          (cond
            (>= (.indexOf accept (mime "json")) 0)
-           (-> (apply str (concat "[" (interpose \, nums) "]"))
-               (resp/response)
-               (resp/content-type (mime "json")))
+           (numbers-mime-response nums "json" "[" "]" \,)
            (>= (.indexOf accept "application/edn") 0)
-           (-> (apply str (concat "[" (interpose \space nums) "]"))
-               (resp/response)
-               (resp/content-type (mime "edn")))
-           :else (-> (apply str (interpose \, nums))
-                     (resp/response)
-                     (resp/content-type (mime "csv"))))))
+           (numbers-mime-response nums "edn" "[" "]" \space)
+           :else (numbers-mime-response nums "csv" "" "" \,))))
 
   (GET "/snapshot" []
-       (-> (resp/file-response (env :rnd-stream))
+       (-> (resp/file-response (-> config :raw :out-path))
            (resp/content-type (mime "text/plain"))))
 
   (POST "/fallback" [n]
         (if-let [n' (and (not (empty? n)) (as-long n))]
           (do
-            (send-off store persist-number n')
+            (add-number n')
             (-> (resp/redirect "/fallback")
                 (assoc :flash {:type :ok :msg (str "Thanks, that's a great number: " n')})))
           (-> (resp/redirect "/fallback")
@@ -262,15 +255,30 @@
 (def app
   (wrap-defaults app-routes site-defaults))
 
-(defonce server (atom nil))
+(defn init-state
+  []
+  (let [raw (-> config :raw :out-path)
+        pool   (read-numbers raw)]
+    (prn :file raw :count (count pool))
+    (reset! state
+     {:html-pool (mapv #(style-number (as-long %)) (take-last (:html-pool-size config) pool))
+      :pool      (take-last (:raw-pool-size config) pool)
+      :last      (as-long (peek pool))
+      :count     (count pool)
+      :store     (store/init-store config)
+      :channels  {}})))
 
 (defn stop! []
-  (when-not (nil? @server)
-    (@server :timeout 100)
-    (reset! server nil)))
+  (when-let [store (:store @state)]
+    (store/close-all! store)
+    (swap! state dissoc :store))
+  (when-let [server (:server @state)]
+    (server :timeout 100)
+    (swap! state dissoc :server)))
 
 (defn -main [& args]
-  (reset! server (http/run-server #'app {:port 3000})))
+  (init-state)
+  (swap! state assoc :server (http/run-server #'app {:port 3000})))
 
 (defn restart
   []
