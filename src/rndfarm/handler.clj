@@ -237,7 +237,7 @@
             [:div.front
              [:div.row [:h1 "RND.FARM"]]
              [:div.row "A stream of human generated randomness"]
-             [:div#stats-pool.row-msg.msg-ok "\u00a0"]
+             [:div#stats-pool.row-msg.msg-ok "Connecting..."]
              [:div#stats-users.row "\u00a0"]
              [:div.row [:button#bt-record "Record"]]
              footer]
