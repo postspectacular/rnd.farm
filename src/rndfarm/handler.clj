@@ -93,7 +93,7 @@
         t1   (tc/to-long (lt/local-now))
         hex (Long/toString v 16)
         dt  (- t1 t0)]
-    (info "ws received: " hex dt)
+    ;;(info "ws received: " hex dt)
     (when-not (get-channel channel)
       (register-channel channel))
     (swap! state assoc-in [:channels channel :pos] [x y])
@@ -145,10 +145,17 @@
       (resp/response)
       (resp/content-type (mime mtype))))
 
-(def include-piwik
+(def piwik-tracking
   (html
    (el/javascript-tag
     "var _paq = _paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']);(function(){var u='//rnd.farm:8080/'; _paq.push(['setTrackerUrl',u+'piwik.php']); _paq.push(['setSiteId',1]); var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);})();")))
+
+(def footer
+  (html
+   [:div.row.row-footer
+    [:a {:href "https://github.com/postspectacular/rnd.farm/blob/master/README.md"} "About / GitHub"]
+    [:br]
+    " &copy; 2015 " [:a {:href "http://postspectacular.com"} "postspectacular.com"]]))
 
 (defroutes app-routes
   (GET "/" [:as req]
@@ -169,8 +176,8 @@
            [:div.row [:h1 "RND.FARM"]]
            [:div.row "A stream of human generated randomness"]
            (if-let [flash (:flash req)]
-             [:div {:class (str "row-msg msg-" (name (:type flash)))} (:msg flash)]
-             [:div.row-msg (.format formatter (:count @state)) " numbers in stream"])
+             [:div {:class (str "row-msg gap msg-" (name (:type flash)))} (:msg flash)]
+             [:div.row-msg (.format formatter (:count @state)) " numbers collected"])
            [:form {:method "post" :action "/"}
             (anti-forgery-field)
             [:div.row-xl
@@ -179,17 +186,10 @@
                       :autofocus true
                       :min "0" :max (:max-num config)}]]
             [:div.row [:input {:type "submit"}]]]
-           [:div.row.row-footer
-            (interpose
-             " &middot; "
-             [#_[:a {:href "#"} "About"]
-              #_[:a {:href "#" :title "Access forthcoming"} "API"]
-              [:a {:href "https://github.com/postspectacular/rnd.farm/blob/master/README.md"} "About / GitHub"]])
-            [:br]
-            " &copy; 2015 "
-            [:a {:href "http://postspectacular.com"} "postspectacular.com"]]]]
+           footer]]
          (butlast (:html-pool @state))
-         (style-number (:last @state) "rnd-last")]))
+         (style-number (:last @state) "rnd-last")
+         piwik-tracking]))
 
   (GET "/new" [:as req]
        ;;(info req)
@@ -210,18 +210,23 @@
             [:div.front
              [:div.row [:h1 "RND.FARM"]]
              [:div.row "A stream of human generated randomness"]
-             [:div.row [:button#bt-record "Record"]]]
+             [:div.row-msg.msg-ok
+              (.format formatter (:count @state)) " numbers collected"]
+             [:div.row (count (:channels @state)) " current users"]
+             [:div.row [:button#bt-record "Record"]]
+             footer]
             [:div.back
-             [:div.row [:h1 "Recording..."]]
+             [:div.row [:h1 "...COLLECTING..."]]
              [:div#reclog.row]
-             [:div#hist-wrapper.row-xl]
+             [:div#hist-wrapper]
+             [:div.row "Move your mouse & press keys randomly!"]
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";"
                   ;;(env :rnd-server-name "localhost:3000")
                   (:server-name config)))
          (include-js "/js/app.js")
-         include-piwik]))
+         piwik-tracking]))
 
   (GET "/ws" [] ws-handler)
 
@@ -261,12 +266,12 @@
         pool   (read-numbers raw)]
     (prn :file raw :count (count pool))
     (reset! state
-     {:html-pool (mapv #(style-number (as-long %)) (take-last (:html-pool-size config) pool))
-      :pool      (vec (take-last (:raw-pool-size config) pool))
-      :last      (as-long (peek pool))
-      :count     (count pool)
-      :store     (store/init-store config)
-      :channels  {}})))
+            {:html-pool (mapv #(style-number (as-long %)) (take-last (:html-pool-size config) pool))
+             :pool      (vec (take-last (:raw-pool-size config) pool))
+             :last      (as-long (peek pool))
+             :count     (count pool)
+             :store     (store/init-store config)
+             :channels  {}})))
 
 (defn stop! []
   (when-let [store (:store @state)]
@@ -278,7 +283,8 @@
 
 (defn -main [& args]
   (init-state)
-  (swap! state assoc :server (http/run-server #'app {:port 3000})))
+  (swap! state assoc :server (http/run-server #'app {:port 3000}))
+  nil)
 
 (defn restart
   []

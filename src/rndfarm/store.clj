@@ -19,7 +19,7 @@
       (loop [ctx (dig/make-context (:algorithm config)), i 0]
         (if-let [x (<! in)]
           (let [buf (dig/int->byte-array x)]
-            (info "add digest val: " x i)
+            ;;(info "add digest val: " x i)
             (dig/update-bytes ctx buf)
             (if (< i chunk-size)
               (recur ctx (+ i (count buf)))
@@ -89,5 +89,4 @@
 
 (defn new-input
   [store x]
-  (info "enque: " x)
   (go (>! (:input store) x)))

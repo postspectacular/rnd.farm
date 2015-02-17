@@ -52,7 +52,7 @@ h1, h2, h3, h4, h5 {
 
 #trans-container {
     width: 630px;
-    height: 260px;
+    height: 300px;
     position: relative;
     margin: 0;
     -webkit-perspective: 800px;
@@ -95,6 +95,7 @@ h1, h2, h3, h4, h5 {
     height: 100%;
     width: 100%;
     position: absolute;
+    padding-top: 0.5em;
     -webkit-backface-visibility: hidden;
     -moz-backface-visibility: hidden;
     -o-backface-visibility: hidden;
@@ -121,6 +122,8 @@ h1, h2, h3, h4, h5 {
 
 #hist-wrapper {
     height: 75px;
+    text-align: center;
+    margin: 1em 0 -0.75em 0;
 }
 
 #axis {
@@ -141,44 +144,53 @@ h1, h2, h3, h4, h5 {
 
 .row {
     padding: 5px;
-    height: 50px;
-    line-height: 50px;
+    height: 36px;
+    line-height: 36px;
     text-align: center;
 }
+
 .row h1 {
-    margin-top: 22px;
+    margin-top: 10px;
 }
+
 .row-xl {
     padding: 5px;
     line-height: 75px;
     text-align: center;
 }
+
 .row-msg {
     padding: 5px;
-    line-height: 50px;
+    line-height: 36px;
     text-align: center;
 }
+
 .row-footer {
     font-size: 12px;
     line-height: 16px;
-    margin-bottom: 1em;
+    margin-top: 1em;
 }
+
 .msg-ok {
     background: #0e9;
     color: #fff;
-    margin-bottom: 1em;
 }
+
 .msg-err {
     background: #f04;
     color: #fff;
+}
+.gap {
     margin-bottom: 1em;
 }
+
 input[type=number] {
     font-size: 44px;
     width: 12em;
     padding: 10px;
     text-align: center;
 }
+
 button, input[type=submit] {
     font-size: 18px;
     background-color: #000;
@@ -188,6 +200,7 @@ button, input[type=submit] {
     font-family: inherit;
     border-radius: 4px
 }
+
 .back button, .back input[type=submit] {
     background-color: #fff;
     color: #000;
@@ -198,6 +211,7 @@ a:visited {
     color: #000;
     text-decoration: none;
 }
+
 @media screen and (max-width:640px) {
     #trans-container {
         width: 480px;
@@ -207,12 +221,16 @@ a:visited {
         padding: 5px;
     }
 }
+
 @media screen and (max-width:480px) {
     body {
         font-size: 14px;
     }
     #trans-container {
         width: 320px;
+    }
+    #hist-wrapper {
+        height: 50px;
     }
     .row-msg {
         line-height: 32px;
@@ -222,13 +240,24 @@ a:visited {
         padding: 2px;
     }
 }
+
 @media screen and (max-height:360px) {
     body {
         font-size: 14px;
     }
+    #trans-container {
+        height: 260px;
+    }
+    #hist-wrapper {
+        height: 65px;
+        margin-bottom: -0.5em;
+    }
+    #main>div {
+        padding-top: 0;
+    }
     .row, .row-msg {
-        height: 24px;
-        line-height: 24px;
+        height: 30px;
+        line-height: 30px;
     }
     .row-msg {
         margin-bottom: 0;

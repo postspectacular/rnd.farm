@@ -50,12 +50,12 @@
   (->> (dom/set-html! (by-id "hist-wrapper") "")
        (dom/create-dom!
         [:svg
-         {:width "90%" :height "100%" :viewBox "-0.2 0 16 1.5"}
+         {:width "90%" :viewBox "0 0 16 1.5"}
          [:g#axis 
           [:polyline
-           {:points "0 0 0 1 16 1"
+           {:points "0 1 16 1"
             :vector-effect "non-scaling-stroke"}]
-          [:path
+          #_[:path
            {:d "M-0.2,0.75L0,0.75M-0.2,0.5L0,0.5M-0.2,0.25L0,0.25"
             :vector-effect "non-scaling-stroke"}]
           [:path
