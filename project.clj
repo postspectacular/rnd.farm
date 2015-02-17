@@ -1,4 +1,4 @@
-(defproject com.postspectacular/rnd-farm "0.1.0-SNAPSHOT"
+(defproject com.postspectacular/rnd-farm "2.0.0"
   :description "Human generated randomness"
   :url "http://rnd.farm/"
   :min-lein-version "2.0.0"
