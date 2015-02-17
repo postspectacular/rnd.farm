@@ -309,9 +309,8 @@
 
 (defn -main [& args]
   (init-state)
-  (start-heartbeat)
   (swap! state assoc :server (http/run-server #'app {:port 3000}))
-  nil)
+  (start-heartbeat))
 
 (defn restart
   []
