@@ -17,6 +17,8 @@
 (def MSG-HIDE 2)
 (def MSG-DISCONNECT 3)
 
+(def BG-HEADERS [:h1 :h2 :h3 :h4 :h5])
+
 (def state (atom nil))
 
 (def by-id (memoize dom/by-id))
@@ -45,9 +47,11 @@
 (defn update-rec-log
   [bits] (dom/set-text! (by-id "reclog") (str bits " bits collected")))
 
+(def tick (memoize #(str "M" % ",1L" % ",1.2")))
+
 (defn init-histogram
   [state]
-  (->> (dom/set-html! (by-id "hist-wrapper") "")
+  (->> (dom/clear! (by-id "hist-wrapper"))
        (dom/create-dom!
         [:svg
          {:width "90%" :viewBox "0 0 16 1.5"}
@@ -55,11 +59,8 @@
           [:polyline
            {:points "0 1 16 1"
             :vector-effect "non-scaling-stroke"}]
-          #_[:path
-           {:d "M-0.2,0.75L0,0.75M-0.2,0.5L0,0.5M-0.2,0.25L0,0.25"
-            :vector-effect "non-scaling-stroke"}]
           [:path
-           {:d "M1,1L1,1.2M2,1L2,1.2M3,1L3,1.2M4,1L4,1.2M5,1L5,1.2M6,1L6,1.2M7,1L7,1.2M8,1L8,1.2M9,1L9,1.2M10,1L10,1.2M11,1L11,1.2M12,1L12,1.2M13,1L13,1.2M14,1L14,1.2M15,1L15,1.2"
+           {:d (apply str (map tick (range 1 16)))
             :vector-effect "non-scaling-stroke"}]]
          [:g#labels
           (for [x (range 16)]
@@ -81,7 +82,7 @@
               (:bins @state) (int->bytes v))
         peak (reduce max bins)
         el-bins (dom/by-id "bins")]
-    (dom/set-html! el-bins "")
+    (dom/clear! el-bins)
     (dorun
      (map-indexed
       (fn [i b]
@@ -91,6 +92,24 @@
            el-bins)))
       bins))
     (swap! state assoc :bins bins)))
+
+(defn add-bg-number
+  [n]
+  (let [h (nth BG-HEADERS (rem n (count BG-HEADERS)))
+        col (str "#" ((f/hex 6) (bit-and n 0xffffff)))
+        px (int (* 100 (/ (bit-and n 1023) 1047.0)))
+        py (int (* 100 (/ (bit-and (unsigned-bit-shift-right n 10) 1023) 1047.0)))]
+    (dom/create-dom!
+     [h {:class "rnd"
+         :style {:color col :left (str px "%") :top (str py "%")}} n]
+     (by-id "bg"))))
+
+(defn process-heartbeat
+  [[size users & nums]]
+  (dom/set-text! (by-id "stats-pool") (str size " numbers collected"))
+  (dom/set-text! (by-id "stats-users") (str users " current user" (if (> users 1) "s")))
+  (dom/clear! (by-id "bg"))
+  (doseq [n nums] (add-bg-number n)))
 
 (defn record-session
   [state]
@@ -182,6 +201,7 @@
              (case (first msg)
                1 (update-cursor peers (rest msg))
                3 (remove-cursor peers (rest msg))
+               4 (do (process-heartbeat (rest msg)) peers)
                peers))))))))
 
 (defn start-recording

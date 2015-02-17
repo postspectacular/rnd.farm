@@ -13,6 +13,7 @@
    [ring.util.anti-forgery :refer [anti-forgery-field]]
    [ring.util.response :as resp]
    [ring.util.mime-type :refer [default-mime-types]]
+   [clojure.core.async :as async :refer [go-loop chan <! timeout]]
    [clojure.java.io :as io]
    [clojure.edn :as edn]
    [clj-time.coerce :as tc]
@@ -72,6 +73,31 @@
 
 (defn get-channel [c] (get-in @state [:channels c]))
 
+(defn heartbeat-payload
+  []
+  (let [size  (.format formatter (:count @state))
+        users (count (:channels @state))]
+    (->> (:pool @state)
+         (take-last (:html-pool-size config))
+         (concat [4 size users])
+         (vec)
+         (pr-str))))
+
+(defn start-heartbeat
+  []
+  (go-loop [i 0]
+    (if (:server @state)
+      (do
+        (<! (timeout 1000))
+        (if (== 9 i)
+          (let [payload (heartbeat-payload)]
+            (info "sending heartbeat info...")
+            (doseq [ch (all-channels)]
+              (http/send! ch payload))
+            (recur 0))
+          (recur (inc i))))
+      (info "heartbeat finished"))))
+
 (defn register-channel
   [channel]
   (info "new channel" channel)
@@ -83,6 +109,7 @@
   [channel]
   (let [channels (:channels @state)]
     (register-channel channel)
+    (http/send! channel (heartbeat-payload))
     (doseq [[ch cv] channels]
       (when-let [pos (cv :pos)]
         (http/send! channel (pr-str [1 (:uuid cv) (pos 0) (pos 1) (:col cv)]))))))
@@ -145,6 +172,18 @@
       (resp/response)
       (resp/content-type (mime mtype))))
 
+(def html-head
+  (html
+   [:head
+    [:meta {:charset "utf-8"}]
+    [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
+    [:meta {:name "viewport" :content "width=device-width,initial-scale=1"}]
+    [:meta {:name "author" :content "Karsten Schmidt, PostSpectacular"}]
+    [:meta {:name "description" :content "A stream of human generated randomness"}]
+    [:meta {:name "keywords" :content "random,numbers,randomness,entropy,crowdsourcing,holo magazine,websockets,clojurescript,opensource,generator,collection"}]
+    [:title "rnd.farm"]
+    (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]))
+
 (def piwik-tracking
   (html
    (el/javascript-tag
@@ -162,14 +201,7 @@
        ;;(info req)
        (html5
         {:lang "en"}
-        [:head
-         [:meta {:charset "utf-8"}]
-         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
-         [:meta {:name "viewport" :content "width=device-width,initial-scale=1"}]
-         [:meta {:name "author" :content "Karsten Schmidt, PostSpectacular"}]
-         [:meta {:name "description" :content "A stream of human generated randomness"}]
-         [:title "rnd.farm"]
-         (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]
+        html-head
         [:body
          [:div.container
           [:div#main-old
@@ -195,24 +227,17 @@
        ;;(info req)
        (html5
         {:lang "en"}
-        [:head
-         [:meta {:charset "utf-8"}]
-         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
-         [:meta {:name "viewport" :content "width=device-width,initial-scale=1"}]
-         [:meta {:name "author" :content "Karsten Schmidt, PostSpectacular"}]
-         [:meta {:name "description" :content "A stream of human generated randomness"}]
-         [:title "rnd.farm"]
-         (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]
+        html-head
         [:body
+         [:div#bg]
          [:div.container
           [:div#trans-container
            [:div#main
             [:div.front
              [:div.row [:h1 "RND.FARM"]]
              [:div.row "A stream of human generated randomness"]
-             [:div.row-msg.msg-ok
-              (.format formatter (:count @state)) " numbers collected"]
-             [:div.row (count (:channels @state)) " current users"]
+             [:div#stats-pool.row-msg.msg-ok "\u00a0"]
+             [:div#stats-users.row "\u00a0"]
              [:div.row [:button#bt-record "Record"]]
              footer]
             [:div.back
@@ -279,10 +304,12 @@
     (swap! state dissoc :store))
   (when-let [server (:server @state)]
     (server :timeout 100)
-    (swap! state dissoc :server)))
+    (swap! state dissoc :server))
+  (Thread/sleep 1100))
 
 (defn -main [& args]
   (init-state)
+  (start-heartbeat)
   (swap! state assoc :server (http/run-server #'app {:port 3000}))
   nil)
 
