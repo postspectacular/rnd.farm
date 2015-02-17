@@ -1,4 +1,5 @@
-{:server-name "192.168.1.68:3000"
+{;;:server-name "192.168.1.68:3000"
+ :server-name "localhost:3000"
  :raw-pool-size 10000
  :html-pool-size 100
  :max-num 4611686018427387903 ;; 2^62-1
