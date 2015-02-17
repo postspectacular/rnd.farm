@@ -290,4 +290,5 @@ div.cursor {
     height: 20px;
     border-radius: 10px;
     margin: -22px 0 0 -10px;
+    box-shadow: 2px 2px 0.5em #999;
 }
