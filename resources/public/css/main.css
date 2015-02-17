@@ -104,14 +104,14 @@ h1, h2, h3, h4, h5 {
 
 #main>div.front {
     background: rgba(255,255,255,0.92);
-    box-shadow: 0 0 2em #fff;
+    box-shadow: 0 0 2em #666;
     border-radius: 4px;
     color: black;
 }
 
 #main>div.back {
     background: rgba(0,0,0,0.92);
-    box-shadow: 0 0 2em #000;
+    box-shadow: 0 0 2em #666;
     border-radius: 4px;
     color: white;
     -webkit-transform: rotateY( 180deg );
@@ -290,5 +290,5 @@ div.cursor {
     height: 20px;
     border-radius: 10px;
     margin: -22px 0 0 -10px;
-    box-shadow: 2px 2px 0.5em #999;
+    box-shadow: 2px 2px 1em rgba(0,0,0,0.5);
 }
