@@ -2,6 +2,35 @@
 
 A stream of human generated randomness
 
+## updates
+
+### 2015-02-17 - v2 released with collection via websocket
+
+A new version has been released, now collecting inherent randomness
+from each user's mouse/touch movements and key presses and their
+differences in timing frequency both in terms of interaction and
+network latency. This provides us with magnitudes more of raw
+collection data and less effort for you, the user. Additionally, all
+submitted numbers are both stored as-is and secondly are run through a
+chunking [SHA-256](http://en.wikipedia.org/wiki/SHA-2) cryptographic
+hash function to distribute bits more uniformly. This is a similar
+approach as used by tools like TrueCrypt or Keepass. More details
+about this approach can be found at these links:
+
+- [Gathering+Entropy+from+Mouse+Events](http://etutorials.org/Programming/secure+programming/Chapter+11.+Random+Numbers/11.21+Gathering+Entropy+from+Mouse+Events+on+Windows/)
+- [Keepass](http://keepass.info/)
+- [TrueCrypt](http://truecrypt.org)
+
+Whilst connected to the site (and if your browser supports
+WebSockets), you can see activity of all other current users. During
+recording your own random events, a histogram of collected bytes is
+displayed, giving an indication of the random distribution of your
+submitted source data. Technical note: since this histogram is byte
+based and submitted values have a variable bit length, the "00" bin
+(grouping bytes between 0x00 - 0x0f) will likely be the most dominant.
+This has no impact on the SHA-256 digest these bytes are fed through.
+The original raw values are *not* split into bytes and stored as is.
+
 ## why?
 
 "Chance, predictability, and (true) randomness" is the theme of the
