@@ -233,6 +233,6 @@
   []
   (if (aget js/window "WebSocket")
     (init-app)
-    (set! (.-href (.-location js/window)) "/")))
+    (set! (.-href (.-location js/window)) "/form")))
 
 (start)

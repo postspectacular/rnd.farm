@@ -198,7 +198,7 @@
     " &copy; 2015 " [:a {:href "http://postspectacular.com"} "postspectacular.com"]]))
 
 (defroutes app-routes
-  (GET "/" [:as req]
+  (GET "/form" [:as req]
        ;;(info req)
        (html5
         {:lang "en"}
@@ -211,7 +211,7 @@
            (if-let [flash (:flash req)]
              [:div {:class (str "row-msg gap msg-" (name (:type flash)))} (:msg flash)]
              [:div.row-msg (.format formatter (:count @state)) " numbers collected"])
-           [:form {:method "post" :action "/"}
+           [:form {:method "post" :action "/form"}
             (anti-forgery-field)
             [:div.row-xl
              [:input {:type "number" :name "n"
@@ -224,7 +224,7 @@
          (style-number (:last @state) "rnd-last")
          piwik-tracking]))
 
-  (GET "/new" [:as req]
+  (GET "/" [:as req]
        ;;(info req)
        (html5
         {:lang "en"}
@@ -272,13 +272,13 @@
        (-> (resp/file-response (-> config :raw :out-path))
            (resp/content-type (mime "text/plain"))))
 
-  (POST "/" [n]
+  (POST "/form" [n]
         (if-let [n' (and (not (empty? n)) (as-long n))]
           (do
             (add-number n')
-            (-> (resp/redirect "/")
+            (-> (resp/redirect "/form")
                 (assoc :flash {:type :ok :msg (str "Thanks, that's a great number: " n')})))
-          (-> (resp/redirect "/")
+          (-> (resp/redirect "/form")
               (assoc :flash {:type :err :msg "Hmmm.... that number wasn't so good!"}))))
 
   (route/not-found "Not Found"))
