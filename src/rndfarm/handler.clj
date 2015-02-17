@@ -245,7 +245,7 @@
              [:div.row [:h1 "...COLLECTING..."]]
              [:div#reclog.row]
              [:div#hist-wrapper]
-             [:div.row "Move your mouse & press keys randomly!"]
+             [:div#cta.row "\u00a0"]
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
           (format "var __RND_WS_URL__=\"ws://%s/ws\";"

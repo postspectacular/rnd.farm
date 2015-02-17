@@ -5,7 +5,8 @@
    [thi.ng.domus.log :refer [debug info warn]]
    [thi.ng.common.stringformat :as f]
    [cljs.core.async :refer [chan <! >! put! timeout close!]]
-   [cljs.reader :as reader])
+   [cljs.reader :as reader]
+   [goog.object])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -218,6 +219,12 @@
              :recording? false})
     (init-receiver state)
     (resize)
+    (dom/set-text!
+     (dom/by-id "cta")
+     (if (or (goog.object.containsKey js/window "ontouchstart")
+             (and (aget js/window "DocumentTouch") (instance? js/DocumentTouch js/document)))
+       "Move your finger randomly on screen!"
+       "Move your mouse & press keys randomly!"))
     (dom/add-listeners
      [[js/window "resize" resize]
       ["#bt-record" "click" (fn [] (start-recording state))]])))
