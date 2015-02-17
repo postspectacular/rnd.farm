@@ -24,6 +24,8 @@
 
 (defonce state (atom {}))
 
+(def CACHE-BUSTER (str \? (rand-int 1e6)))
+
 (def mime default-mime-types)
 
 (def formatter (java.text.DecimalFormat. "#,###,###,###,###,###,###"))
@@ -182,7 +184,7 @@
     [:meta {:name "description" :content "A stream of human generated randomness"}]
     [:meta {:name "keywords" :content "random,numbers,randomness,entropy,crowdsourcing,holo magazine,websockets,clojurescript,opensource,generator,collection"}]
     [:title "rnd.farm"]
-    (include-css "http://fonts.googleapis.com/css?family=Inconsolata" "/css/main.min.css")]))
+    (include-css "http://fonts.googleapis.com/css?family=Inconsolata" (str "/css/main.min.css" CACHE-BUSTER))]))
 
 (def piwik-tracking
   (html
@@ -250,7 +252,7 @@
           (format "var __RND_WS_URL__=\"ws://%s/ws\";"
                   ;;(env :rnd-server-name "localhost:3000")
                   (:server-name config)))
-         (include-js "/js/app.js")
+         (include-js (str "/js/app.js" CACHE-BUSTER))
          piwik-tracking]))
 
   (GET "/ws" [] ws-handler)
