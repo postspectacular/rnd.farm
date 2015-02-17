@@ -26,7 +26,8 @@
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring-mock "0.1.5"]]
          :plugins      [[lein-ring "0.8.13"]
-                        [lein-cljsbuild "1.0.4"]]}}
+                        [lein-cljsbuild "1.0.4"]]}
+   :prod {:jvm-opts ["-server" "-Xms1g" "-Xmx3g"]}}
 
   :cljsbuild
   {:builds [{:id "dev"
