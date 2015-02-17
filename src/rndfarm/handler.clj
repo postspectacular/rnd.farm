@@ -299,7 +299,14 @@
              :store     (store/init-store config)
              :channels  {}})))
 
-(defn stop! []
+(defn start!
+  []
+  (init-state)
+  (swap! state assoc :server (http/run-server #'app {:port 3000}))
+  (start-heartbeat))
+
+(defn stop!
+  []
   (when-let [store (:store @state)]
     (store/close-all! store)
     (swap! state dissoc :store))
@@ -308,13 +315,10 @@
     (swap! state dissoc :server))
   (Thread/sleep 1100))
 
-(defn -main [& args]
-  (init-state)
-  (swap! state assoc :server (http/run-server #'app {:port 3000}))
-  (start-heartbeat))
-
-(defn restart
+(defn restart!
   []
   (stop!)
   (Thread/sleep 200)
-  (-main nil))
+  (start!))
+
+(defn -main [& args] (start!))

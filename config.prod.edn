@@ -6,8 +6,8 @@
  :digest {:algorithm "SHA-256"
           :buf-size 512
           :chunk-size 1024
-          :out-path "digests.dat"
+          :out-path "digests-prod.dat"
           :out-buf-size 16}
  :raw {:buf-size 512
-       :out-path "raw.txt"}
+       :out-path "raw-prod.txt"}
  }

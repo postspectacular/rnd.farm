@@ -4,7 +4,7 @@ A stream of human generated randomness
 
 ## updates
 
-### 2015-02-17 - v2 released with collection via websocket
+### 2015-02-17 - v2 released with data collection via websockets
 
 A new version has been released, now collecting inherent randomness
 from each user's mouse/touch movements and key presses and their
@@ -17,19 +17,32 @@ hash function to distribute bits more uniformly. This is a similar
 approach as used by tools like TrueCrypt or Keepass. More details
 about this approach can be found at these links:
 
-- [Gathering+Entropy+from+Mouse+Events](http://etutorials.org/Programming/secure+programming/Chapter+11.+Random+Numbers/11.21+Gathering+Entropy+from+Mouse+Events+on+Windows/)
+- [Gathering entropy from mouse events](http://etutorials.org/Programming/secure+programming/Chapter+11.+Random+Numbers/11.21+Gathering+Entropy+from+Mouse+Events+on+Windows/)
 - [Keepass](http://keepass.info/)
 - [TrueCrypt](http://truecrypt.org)
 
+#### WebSocket support
+
 Whilst connected to the site (and if your browser supports
 WebSockets), you can see activity of all other current users. During
-recording your own random events, a histogram of collected bytes is
+recording your own random events, an histogram of collected bytes is
 displayed, giving an indication of the random distribution of your
-submitted source data. Technical note: since this histogram is byte
-based and submitted values have a variable bit length, the "00" bin
-(grouping bytes between 0x00 - 0x0f) will likely be the most dominant.
-This has no impact on the SHA-256 digest these bytes are fed through.
-The original raw values are *not* split into bytes and stored as is.
+submitted source data.
+
+*Technical note:* Since this histogram is byte based and submitted
+values have a variable bit length, the "00" bin (grouping bytes
+between 0x00 - 0x0f) will likely be the most dominant, since it will
+capture the truncated MSB end of the variable width integers. This has
+no impact on the SHA-256 digest these bytes are fed through. The
+original raw values are *not* split into bytes and stored as is
+(unsigned ints).
+
+#### Non-WebSocket version
+
+If your browser does not support WebSockets, you'll be automatically
+redirected to the previous, form-based version, here:
+
+http://rnd.farm/form
 
 ## why?
 
@@ -65,22 +78,22 @@ enlightening to analyze the distribution itself in more detail.
 ## how?
 
 The initial site is merely targeted at kickstarting the collection of
-**our** random numbers (you can submit as many as you like). A simple,
-public read-only API with optional seeding will be implemented in the
-next few days to help integrating this stream into the above mentioned
-GP setup.
+**our** random numbers (you can submit as many as you like).
 
-The range of numbers supported is 0 .. 2^62
-(4,611,686,018,427,387,904) and that limit is being enforced.
+This project was built with:
 
-The app was built with:
-
-* Clojure
+* Clojure / ClojureScript
 * Leiningen
+* Http-Kit
 * Ring
 * Compojure
 * Hiccup
 * Environ
+* core.async
+* clj-time
+* thi.ng/domus
+* thi.ng/color
+* timbre
 
 ## obtaining numbers
 
@@ -113,12 +126,27 @@ To start a local version on your own machine:
 ```bash
 git clone https://github.com/postspectacular/rnd.farm.git
 cd rnd.farm
-RND_STREAM=random.txt lein ring server
+RND_CONFIG=config.edn lein trampoline run
+```
+
+Alternatively, if you want to launch into a project REPL:
+
+```bash
+RND_CONFIG=config.edn lein repl
+```
+
+In the REPL you can reload the server like this:
+
+```clj
+(require 'rndfarm.handler :reload) (restart!)
 ```
 
 After a few seconds, this will have launched the server on port 3000
 and automatically opens the site in your browser. Numbers will be read
-& written to the file given as `RND_STREAM`.
+& written to the files given in the config file (config.edn):
+
+- SHA-256 digests are emitted in binary to the file given in config `:digest :out-path`.
+- Raw ints are written as plain text to `:raw :out-path`
 
 ## license
 
