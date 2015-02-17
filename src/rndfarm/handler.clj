@@ -91,9 +91,8 @@
     (if (:server @state)
       (do
         (<! (timeout 1000))
-        (if (== 9 i)
+        (if (== (:heartbeat config) i)
           (let [payload (heartbeat-payload)]
-            (info "sending heartbeat info...")
             (doseq [ch (all-channels)]
               (http/send! ch payload))
             (recur 0))

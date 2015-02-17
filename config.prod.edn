@@ -2,6 +2,7 @@
  :raw-pool-size 10000
  :html-pool-size 100
  :max-num 4611686018427387903 ;; 2^62-1
+ :heartbeat 5
  :digest {:algorithm "SHA-256"
           :buf-size 512
           :chunk-size 1024
