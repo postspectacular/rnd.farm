@@ -183,7 +183,7 @@
     [:meta {:name "description" :content "A stream of human generated randomness"}]
     [:meta {:name "keywords" :content "random,numbers,randomness,entropy,crowdsourcing,holo magazine,websockets,clojurescript,opensource,generator,collection"}]
     [:title "rnd.farm"]
-    (include-css "http://fonts.googleapis.com/css?family=Inconsolata" (str "/css/main.min.css" CACHE-BUSTER))]))
+    (include-css "//fonts.googleapis.com/css?family=Inconsolata" (str "/css/main.min.css" CACHE-BUSTER))]))
 
 (def piwik-tracking
   (html
@@ -248,8 +248,9 @@
              [:div#cta.row "\u00a0"]
              [:div.row [:button#bt-cancel "Cancel"]]]]]]
          (el/javascript-tag
-          (format "var __RND_WS_URL__=\"ws://%s/ws\";"
+          (format "var __RND_WS_URL__=\"%s://%s/ws\";"
                   ;;(env :rnd-server-name "localhost:3000")
+                  (:ws-protocol config)
                   (:server-name config)))
          (include-js (str "/js/app.js" CACHE-BUSTER))
          piwik-tracking]))
@@ -270,9 +271,13 @@
 
   (GET "/snapshot" []
        (-> (resp/file-response (-> config :raw :out-path))
-           (resp/content-type (mime "text/plain"))))
+           (resp/content-type (mime "txt"))))
 
-  (POST "/form" [n]
+  (GET "/digests" []
+       (-> (resp/file-response (-> config :digest :out-path))
+           (resp/content-type (mime "bin"))))
+  
+  (POST "/form" [n :as req]
         (if-let [n' (and (not (empty? n)) (as-long n))]
           (do
             (add-number n')
@@ -322,3 +327,14 @@
   (start!))
 
 (defn -main [& args] (start!))
+
+;; regenerate digests
+(comment
+
+  (require '[rndfarm.generator :as gen])
+  (restart!)
+  (doseq [chunk (partition-all 480 (gen/read-raw "20150322-raw-prod.txt"))]
+    (Thread/sleep 30)
+    (doseq [x chunk] (add-number x)))
+
+  )

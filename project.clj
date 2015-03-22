@@ -1,10 +1,15 @@
 (defproject com.postspectacular/rnd-farm "2.0.0"
-  :description "Human generated randomness"
-  :url "http://rnd.farm/"
+  :description  "Human generated randomness"
+  :url          "http://rnd.farm/"
+  :license      {:name "Apache Software License"
+                 :url "http://www.apache.org/licenses/LICENSE-2.0"
+                 :distribution :repo}
+  :scm          {:name "git"
+                 :url  "https://github.com/postspectacular/rnd.farm"}
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2657"]
+                 [org.clojure/clojurescript "0.0-3117"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [http-kit "2.1.16"]
                  [compojure "1.3.1"]
@@ -13,32 +18,22 @@
                  [environ "1.0.0"]
                  [clj-time "0.9.0"]
                  [com.taoensso/timbre "2.3.0"]
-                 [thi.ng/domus "0.1.0-SNAPSHOT"]
-                 [thi.ng/color "0.1.1-SNAPSHOT"]
-                 [thi.ng/geom-core "0.3.0-SNAPSHOT"]
-                 [thi.ng/geom-types "0.3.0-SNAPSHOT"]
-                 [thi.ng/geom-svg "0.3.0-SNAPSHOT"]]
+                 [thi.ng/common "0.3.1"]
+                 [thi.ng/domus "0.1.0"]
+                 [thi.ng/color "0.1.2"]]
 
-  :ring {:handler rndfarm.handler/app}
-  :main rndfarm.handler
+  :main         rndfarm.handler
 
-  :profiles
-  {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [ring-mock "0.1.5"]]
-         :plugins      [[lein-ring "0.8.13"]
-                        [lein-cljsbuild "1.0.4"]]}
-   :prod {:jvm-opts ["-server" "-Xms1g" "-Xmx3g"]}}
+  :profiles     {:dev  {:plugins  [[lein-cljsbuild "1.0.5"]]}
+                 :prod {:jvm-opts ["-server" "-Xms1g" "-Xmx3g"]}}
 
-  :cljsbuild
-  {:builds [{:id "dev"
-             :source-paths ["src-cljs"]
-             :compiler {:output-to "resources/public/js/app.js"
-                        :optimizations :whitespace}}
-            {:id "prod"
-             :source-paths ["src-cljs"]
-             :compiler {:output-to "resources/public/js/app.js"
-                        :optimizations :advanced
-                        :pretty-print false
-                        ;;:preamble ["header.js"]
-                        ;;:externs ["externs.js"]
-                        }}]})
+  :cljsbuild    {:builds
+                 [{:id "dev"
+                   :source-paths ["src-cljs"]
+                   :compiler {:output-to "resources/public/js/app.js"
+                              :optimizations :whitespace}}
+                  {:id "prod"
+                   :source-paths ["src-cljs"]
+                   :compiler {:output-to "resources/public/js/app.js"
+                              :optimizations :advanced
+                              :pretty-print false}}]})

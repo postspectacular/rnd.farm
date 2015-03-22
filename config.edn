@@ -1,12 +1,13 @@
 {;;:server-name "192.168.1.68:3000"
- :server-name "localhost:3000"
+ :server-name "localhost"
+ :ws-protocol "wss"
  :raw-pool-size 10000
  :html-pool-size 100
  :max-num 4611686018427387903 ;; 2^62-1
  :heartbeat 5
  :digest {:algorithm "SHA-256"
           :buf-size 512
-          :chunk-size 1024
+          :chunk-size 512
           :out-path "digests.dat"
           :out-buf-size 16}
  :raw {:buf-size 512
