@@ -4,6 +4,11 @@ A stream of human generated randomness
 
 ## updates
 
+### 2016-01-07
+
+Read more about the project and its usage in this blog post:
+[Evolutionary Failures (Part 1)](https://medium.com/@thi.ng/evolutionary-failures-part-1-54522c69be37)
+
 ### 2015-02-17 - v2 released with data collection via websockets
 
 A new version has been released, now collecting inherent randomness
