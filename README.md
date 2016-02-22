@@ -4,6 +4,10 @@ A stream of human generated randomness
 
 ## updates
 
+### 2016-02-11
+
+Today the DNS for this experiment expired and the project is now offline. Thanks to all who participated.
+
 ### 2016-01-07
 
 Read more about the project and its usage in this blog post:
