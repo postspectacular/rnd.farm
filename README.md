@@ -1,8 +1,16 @@
-# [rnd.farm](http://rnd.farm)
+![rnd.farm screenshot](https://raw.githubusercontent.com/postspectacular/rnd.farm/master/rndfarm-screenshot.png)
+
+# rnd.farm
 
 A stream of human generated randomness
 
 ## updates
+
+### 2022-01-24
+
+Update readme, add screenshot. More context for this project can be found in this blog post:
+
+https://medium.com/@thi.ng/evolutionary-failures-part-1-54522c69be37
 
 ### 2016-02-11
 
